@@ -1,7 +1,7 @@
 # FastAPI Template - Development Operations
 # Quick Start: make setup → cp .env.example .env → make infra-up → make db-migrate message="init" → make db-upgrade → make dev
 
-.PHONY: help setup dev test lint format clean db-migrate db-upgrade db-downgrade infra-up infra-down infra-reset infra-logs
+.PHONY: help setup dev test lint format clean db-migrate db-upgrade db-downgrade infra-up infra-down infra-reset infra-logs client-generate
 
 help:
 	@echo "FastAPI Template - Available Commands"
@@ -21,6 +21,8 @@ help:
 	@echo "  make test            - Run all tests"
 	@echo "  make lint            - Run linter"
 	@echo "  make format          - Format code"
+	@echo ""
+	@echo "  make client-generate - Generate TypeScript client from OpenAPI schema"
 	@echo ""
 	@echo "  make clean           - Remove cache and venv"
 
@@ -100,6 +102,19 @@ format:
 # By name: uv run pytest -k test_name
 test:
 	uv run pytest
+
+# ============================================================================
+# Client Generation
+# ============================================================================
+
+# Generate TypeScript client using Hey API from OpenAPI schema
+# Output: ./client directory with TypeScript SDK
+client-generate:
+	@echo "Exporting OpenAPI schema..."
+	@PYTHONPATH=. uv run python scripts/export_openapi.py
+	@echo "Generating TypeScript client..."
+	@npx @hey-api/openapi-ts -i openapi.json -o client
+	@echo "✓ TypeScript client generated in ./client"
 
 # ============================================================================
 # Cleanup

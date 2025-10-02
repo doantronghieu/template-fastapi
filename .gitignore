@@ -31,4 +31,8 @@ htmlcov/
 # Logs
 *.log
 
+# Generated clients
+openapi.json
+client/
+
 **/tmp

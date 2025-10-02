@@ -30,6 +30,7 @@ make dev                                # Start server (http://127.0.0.1:8000)
 - `make test` - Run all tests (specific: `uv run pytest tests/test_file.py::test_name`)
 - `make lint` / `make format` - Code quality
 - `make db-migrate message="desc"` → `make db-upgrade` - Database migrations
+- `make client-generate` - Generate TypeScript client from OpenAPI schema
 - `make infra-up` / `infra-down` / `infra-reset` - Infrastructure management
 
 ## Architecture
@@ -48,6 +49,9 @@ app/
 │   └── example.py    # Example SQLModel
 ├── schemas/          # Pydantic request/response models
 └── services/         # Business logic layer
+
+scripts/              # Utility scripts
+└── export_openapi.py # Exports OpenAPI schema for client generation
 
 tests/                # Pytest suite with async support (asyncio_mode = "auto")
 ├── conftest.py       # Test fixtures: test_engine, db_session, client, sync_client
@@ -151,6 +155,62 @@ async def test_create_user(db_session: AsyncSession):
     await db_session.refresh(user)
     assert user.id is not None
 ```
+
+## TypeScript Client Generation
+
+This project uses **@hey-api/openapi-ts** to generate type-safe TypeScript clients from the FastAPI OpenAPI schema.
+
+**Generate client:**
+```bash
+make client-generate
+```
+
+This command:
+1. Exports OpenAPI schema using `scripts/export_openapi.py`
+2. Generates TypeScript client in `./client/` directory
+3. Creates fully typed SDK with autocomplete for all endpoints
+
+**Generated structure:**
+```
+client/
+├── index.ts          # Main exports
+├── sdk.gen.ts        # API functions (e.g., getExamplesApiExamplesGet)
+├── types.gen.ts      # TypeScript types for all models
+└── client.gen.ts     # HTTP client configuration
+```
+
+**Key features:**
+- **SQLModel → TypeScript**: Database models automatically become TypeScript types
+- **Type safety**: Full IDE autocomplete for requests, responses, and model fields
+- **Path parameters**: Type-safe enforcement of required parameters
+- **Nullability preserved**: `str | None` → `string | null`
+
+**Example usage:**
+```typescript
+import { getExamplesApiExamplesGet, Example } from './client';
+
+async function fetchExamples() {
+  const response = await getExamplesApiExamplesGet({
+    baseUrl: 'http://127.0.0.1:8000',
+  });
+
+  // TypeScript knows response.data is Array<Example>
+  response.data?.forEach((example) => {
+    console.log(example.name);  // Full autocomplete!
+  });
+}
+```
+
+**Workflow:**
+1. Define SQLModel in `app/models/`
+2. Create endpoint with `response_model=YourModel`
+3. Include router in `app/api/router.py`
+4. Run `make client-generate`
+5. TypeScript client has full type safety for your model
+
+**Important:**
+- Re-run `make client-generate` after API changes
+- `openapi.json` and `client/` are gitignored (regenerate as needed)
 
 ## Environment Configuration
 
