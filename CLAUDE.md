@@ -2,173 +2,259 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Overview
+## Project Overview
 
-FastAPI template with SQLModel, Alembic, PostgreSQL, and Docker Compose for rapid development.
+FastAPI template with SQLModel (async SQLAlchemy), PostgreSQL, Redis, Celery task queue, and API documentation via Scalar. Uses `uv` for dependency management and Docker Compose for infrastructure.
 
 **Tech Stack:**
 - **FastAPI** 0.118+ - Modern, fast web framework
 - **SQLModel** 0.0.22+ - SQL databases with Python type hints (SQLAlchemy + Pydantic)
 - **Alembic** 1.14+ - Database migrations with async support
 - **PostgreSQL 17** (Alpine) - Primary database via Docker
+- **Redis 7** (Alpine) - Message broker for Celery
+- **Celery** 5.5+ - Distributed task queue
+- **Flower** 2.0+ - Celery monitoring UI
 - **Python** 3.10+ - Uses modern union syntax (`int | None`)
 - **uv** - Fast Python package manager
 
 ## Quick Start
 
 ```bash
-make setup                              # Create venv and install dependencies
-cp .env.example .env                    # Configure environment
-make infra-up                           # Start PostgreSQL
-make db-migrate message="init"          # Generate initial migration
-make db-upgrade                         # Apply migrations
-make dev                                # Start server (http://127.0.0.1:8000)
+# Initial setup (one-time)
+make setup                                    # Create venv and install dependencies
+cp .env.example .env                          # Configure environment variables
+make infra-up                                 # Start PostgreSQL, Redis, Celery, Flower
+make db-migrate message="init"                # Generate initial migration
+make db-upgrade                               # Apply migrations
+
+# Development workflow
+make dev                                      # Start FastAPI server at http://127.0.0.1:8000
 ```
 
-**Common Commands:** (See `Makefile` or run `make help`)
-- `make dev` - Start server with hot reload
-- `make test` - Run all tests (specific: `uv run pytest tests/test_file.py::test_name`)
-- `make lint` / `make format` - Code quality
-- `make db-migrate message="desc"` → `make db-upgrade` - Database migrations
-- `make client-generate` - Generate TypeScript client from OpenAPI schema
-- `make infra-up` / `infra-down` / `infra-reset` - Infrastructure management
+## Common Commands
+
+### Development
+- `make dev` - Start uvicorn with hot reload (http://127.0.0.1:8000)
+- `make format` - Format code with ruff
+- `make lint` - Run ruff linter with auto-fix
+- `make test` - Run pytest suite
+
+### Infrastructure (Docker Compose)
+- `make infra-up` - Start PostgreSQL, Redis, Celery worker, Flower (http://127.0.0.1:5555)
+- `make infra-down` - Stop all containers (preserves data in volumes)
+- `make infra-reset` - Destroy volumes and recreate infrastructure with migrations
+- `make infra-logs` - Follow logs from all services
+
+### Database Migrations (Alembic)
+- `make db-migrate message="description"` - Generate migration (auto-detects model changes)
+- `make db-upgrade` - Apply pending migrations
+- `make db-downgrade` - Rollback last migration
+- Direct: `uv run alembic revision --autogenerate -m "message"` or `uv run alembic upgrade head`
+
+### Testing
+- `make test` - Run all tests
+- `uv run pytest tests/test_file.py` - Run specific file
+- `uv run pytest tests/test_file.py::test_name` - Run specific test
+- `uv run pytest -v` - Verbose output
+- `uv run pytest -s` - Show print statements
+- `uv run pytest -m integration` - Run integration tests only
+- Tests use `{POSTGRES_DB}_test` database with transaction rollback isolation
+
+### Client Generation
+- `make client-generate` - Generate TypeScript client from OpenAPI schema using Hey API
 
 ## Architecture
 
-### Project Structure
+### Application Structure
+
+**Core application files:**
+- `app/main.py` - FastAPI app with lifespan context manager, Scalar docs at root
+- `app/api/router.py` - Main API router aggregating all endpoint modules
+- `app/api/health.py` - Health check endpoint
+- `app/api/examples.py` - Example CRUD endpoints
+- `app/api/tasks.py` - Celery task trigger and status endpoints
+- `app/core/config.py` - Settings using Pydantic BaseSettings
+- `app/core/database.py` - Async engine, session factory, init_db()
+- `app/core/celery.py` - Celery app configuration
+- `app/models/` - SQLModel table definitions (auto-imported by Alembic)
+- `app/schemas/` - Pydantic request/response schemas
+- `app/services/` - Business logic layer
+- `app/tasks/` - Celery task definitions
+
+**Supporting directories:**
+- `tests/` - Pytest suite with async support and fixtures
+- `alembic/` - Database migrations with async support
+- `docker/` - Docker configurations (Dockerfile.celery)
+- `scripts/` - Utility scripts (export_openapi.py)
+
+### Configuration System
+
+**Settings** (`app/core/config.py`): Pydantic BaseSettings with required fields (no defaults for sensitive data). All settings load from `.env` file. Use `.env.example` as template.
+
+**Dynamic properties** construct connection URLs from component variables:
+- `DATABASE_URL` - PostgreSQL connection string for SQLAlchemy
+- `CELERY_BROKER_URL` - Redis broker for Celery (db 0)
+- `CELERY_RESULT_BACKEND` - Redis result backend (db 1)
+- `CELERY_TASKS_MODULE` - Computed from `CELERY_APP_NAME` (e.g., "app.tasks")
+
+### Database Layer
+
+**Engine**: Async SQLAlchemy via SQLModel (`app/core/database.py:10`)
+- Created once at module import with `create_async_engine()`
+- Uses `settings.DATABASE_URL` and `settings.DATABASE_ECHO`
+
+**Sessions**: Async sessionmaker with `expire_on_commit=False` (`app/core/database.py:17`)
+- Use `get_session()` dependency in endpoints for automatic session management
+- Pattern: `async def endpoint(session: AsyncSession = Depends(get_session))`
+
+**Models**: SQLModel tables in `app/models/` (`app/models/example.py`)
+- Inherit from `SQLModel` with `table=True`
+- Set `__tablename__` explicitly
+- Use Field() for constraints (primary_key, index, max_length)
+
+**Initialization**: `init_db()` creates all tables at startup via lifespan context manager (`app/main.py:12-18`)
+
+### Alembic Migrations
+
+**Auto-discovery**: Models auto-imported from `app/models/*.py` via glob pattern (`alembic/env.py:14-18`)
+- Add new model file → migrations automatically detect it
+- No need to manually import models in env.py
+
+**Async support**: Uses `async_engine_from_config` and `run_sync()` (`alembic/env.py:74-86`)
+
+**URL override**: `settings.DATABASE_URL` replaces alembic.ini URL at runtime (`alembic/env.py:25`)
+
+### Celery Task Queue
+
+**Configuration** (`app/core/celery.py`):
+- Broker: Redis db 0
+- Backend: Redis db 1
+- Tasks auto-discovered from `app/tasks/` via `include=[settings.CELERY_TASKS_MODULE]`
+
+**Task definition pattern** (`app/tasks/example_tasks.py`):
+```python
+@celery_app.task(name=f"{settings.CELERY_TASKS_MODULE}.task_name")
+def task_name(args) -> ReturnType:
+    # Task logic
+    return result
 ```
-app/
-├── main.py           # FastAPI app with lifespan context manager, includes api_router with /api prefix
-├── api/
-│   ├── router.py     # Central API router aggregating all route modules
-│   └── health.py     # Health check endpoint (/api/health)
-├── core/
-│   ├── config.py     # Settings using pydantic-settings (BaseSettings) from .env
-│   └── database.py   # Async engine, session factory, get_session() dependency
-├── models/           # SQLModel table definitions (auto-imported by Alembic)
-│   └── example.py    # Example SQLModel
-├── schemas/          # Pydantic request/response models
-└── services/         # Business logic layer
 
-scripts/              # Utility scripts
-└── export_openapi.py # Exports OpenAPI schema for client generation
+**Task execution** (`app/api/tasks.py`):
+- Trigger: `task_function.delay(*args)` returns AsyncResult with `.id`
+- Status check: `AsyncResult(task_id, app=celery_app)` → `.state`, `.result`, `.ready()`
 
-tests/                # Pytest suite with async support (asyncio_mode = "auto")
-├── conftest.py       # Test fixtures: test_engine, db_session, client, sync_client
-├── README.md         # Comprehensive testing guide
-└── test_*.py         # Test files
+**Docker services**:
+- `celery-worker`: Runs worker with `uv run celery -A app.core.celery:celery_app worker`
+- `flower`: Web UI for monitoring at http://127.0.0.1:5555
 
-alembic/              # Database migrations
-├── versions/         # Migration files
-└── env.py            # Alembic config with async SQLModel setup, auto-imports app/models/
-```
+### API Layer
 
-### Key Design Decisions
+**Router aggregation** (`app/api/router.py`):
+- Main `api_router` includes all endpoint routers
+- Mounted at `/api` prefix in main.py
+- Tags organize endpoints in API docs
 
-- **API Routing**: All routes prefixed with `/api` (no versioning). Add endpoints in `app/api/` and include in `app/api/router.py`
+**Endpoint pattern** (`app/api/examples.py`):
+- Use `APIRouter()` at module level
+- Depend on `get_session()` for database access
+- Return SQLModel instances directly (auto-serialized)
+- Use async/await with SQLAlchemy select()
 
-- **Configuration**: `pydantic-settings` for environment-based config. Settings singleton in `app/core/config.py` loads from `.env`
+**API Documentation**:
+- Scalar UI at http://127.0.0.1:8000/scalar (default via root redirect)
+- Interactive API reference with all endpoints, schemas, examples
+- OpenAPI schema auto-generated from FastAPI
 
-- **Database**:
-  - SQLModel ORM with async PostgreSQL (asyncpg driver)
-  - Sessions via dependency injection: `get_session()` yields `AsyncSession`
-  - Database URL auto-constructed: `postgresql+asyncpg://user:pass@host:port/db`
-  - All operations are async - remember to `await`
+### Testing Infrastructure
 
-- **Migrations**:
-  - Alembic configured for async with auto-import of models from `app/models/`
-  - `alembic/env.py` automatically discovers all `app/models/*.py` files
-  - No manual imports needed in env.py
+**Configuration** (`pyproject.toml:29-34`):
+- `asyncio_mode = "auto"` - No `@pytest.mark.asyncio` needed
+- `testpaths = ["tests"]`
+- Custom marker: `@pytest.mark.integration` for tests requiring Celery worker
 
-- **Testing**:
-  - Test database: `{POSTGRES_DB}_test` (auto-created)
-  - Transaction rollback for isolation (each test)
-  - Fixtures in `conftest.py`: `db_session`, `client`, `sync_client`, `test_engine`
-  - No `@pytest.mark.asyncio` needed (auto-detected)
+**Test database** (`tests/conftest.py`):
+- Name: `{POSTGRES_DB}_test` (e.g., `db_test`)
+- Tables: Created once per session, dropped at end
+- Isolation: Each test in transaction that rolls back
 
-### Adding New Endpoints
+**Key fixtures** (all function-scoped except `test_engine`):
+- `test_engine` (session) - Database engine
+- `db_session` - Async session with transaction rollback
+- `client` - Async HTTP client (httpx.AsyncClient) with DB override
+- `sync_client` - Synchronous TestClient for non-async tests
 
-1. Create router in `app/api/users.py`:
-   ```python
-   from fastapi import APIRouter, Depends
-   from sqlalchemy.ext.asyncio import AsyncSession
-   from app.core.database import get_session
+See `tests/README.md` for detailed testing guide.
 
-   router = APIRouter()
+## Development Patterns
 
-   @router.get("/users")
-   async def get_users(session: AsyncSession = Depends(get_session)):
-       # Your logic here
-       pass
-   ```
+### Adding New Model
 
-2. Include in `app/api/router.py`:
-   ```python
-   from app.api import users
-   api_router.include_router(users.router, tags=["users"])
-   ```
-
-### Working with Database
-
-**Create a new model:**
-1. Define in `app/models/user.py` (auto-imported by Alembic):
+1. Create model in `app/models/your_model.py`:
    ```python
    from sqlmodel import Field, SQLModel
 
-   class User(SQLModel, table=True):
-       __tablename__ = "users"
+   class YourModel(SQLModel, table=True):
+       __tablename__ = "your_table"
        id: int | None = Field(default=None, primary_key=True)
-       email: str = Field(unique=True, index=True)
-       name: str
+       name: str = Field(max_length=255)
    ```
 
 2. Generate and apply migration:
    ```bash
-   make db-migrate message="add users table"
+   make db-migrate message="add your_table"
    make db-upgrade
    ```
 
-**Query in endpoints:**
-```python
-from sqlalchemy import select
+### Adding New API Endpoint
 
-@router.get("/users/{user_id}")
-async def get_user(user_id: int, session: AsyncSession = Depends(get_session)):
-    result = await session.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    return user
-```
+1. Create router in `app/api/your_endpoints.py` following `app/api/examples.py` pattern
+2. Register in `app/api/router.py`: `api_router.include_router(your_endpoints.router, tags=["your_tag"])`
+3. Use `get_session()` dependency for database access
+4. Return SQLModel instances or Pydantic schemas
 
-## Testing
+### Adding Celery Task
 
-- **Run tests:** `make test` or `uv run pytest -v -s`
-- **Test database:** PostgreSQL must be running (`make infra-up`)
-- **Fixtures:** See `tests/conftest.py` for `db_session`, `client`, `sync_client`
-- **Guide:** See `tests/README.md` for comprehensive examples and patterns
+1. Define task in `app/tasks/your_tasks.py`:
+   ```python
+   from app.core.celery import celery_app
+   from app.core.config import settings
 
-**Example test:**
-```python
-async def test_create_user(db_session: AsyncSession):
-    user = User(email="test@example.com", name="Test")
-    db_session.add(user)
-    await db_session.commit()
-    await db_session.refresh(user)
-    assert user.id is not None
-```
+   @celery_app.task(name=f"{settings.CELERY_TASKS_MODULE}.your_task")
+   def your_task(args) -> ReturnType:
+       # Task logic here
+       return result
+   ```
 
-## TypeScript Client Generation
+2. Import in `app/tasks/__init__.py`:
+   ```python
+   from app.tasks.your_tasks import *  # noqa: F401, F403
+   ```
 
-This project uses **@hey-api/openapi-ts** to generate type-safe TypeScript clients from the FastAPI OpenAPI schema.
+3. Create endpoint to trigger task:
+   ```python
+   from app.tasks.your_tasks import your_task
 
-**Generate client:**
+   @router.post("/trigger")
+   async def trigger_task():
+       task = your_task.delay(*args)  # type: ignore[attr-defined]
+       return {"task_id": task.id, "status": "queued"}
+   ```
+
+**Important notes:**
+- Always use `@celery_app.task` (not `@shared_task`)
+- Task names: `f"{settings.CELERY_TASKS_MODULE}.{function_name}"` pattern
+- Tasks are synchronous (Celery handles concurrency)
+- Use `task.delay()` for async execution or `task.apply_async()` for advanced options
+- Keep tasks idempotent and handle failures gracefully
+
+### TypeScript Client Generation
+
+**Generate type-safe client:**
 ```bash
 make client-generate
 ```
 
-This command:
-1. Exports OpenAPI schema using `scripts/export_openapi.py`
-2. Generates TypeScript client in `./client/` directory
-3. Creates fully typed SDK with autocomplete for all endpoints
+This exports OpenAPI schema and generates TypeScript client in `./client/` with full type safety.
 
 **Generated structure:**
 ```
@@ -179,13 +265,7 @@ client/
 └── client.gen.ts     # HTTP client configuration
 ```
 
-**Key features:**
-- **SQLModel → TypeScript**: Database models automatically become TypeScript types
-- **Type safety**: Full IDE autocomplete for requests, responses, and model fields
-- **Path parameters**: Type-safe enforcement of required parameters
-- **Nullability preserved**: `str | None` → `string | null`
-
-**Example usage:**
+**Usage example:**
 ```typescript
 import { getExamplesApiExamplesGet, Example } from './client';
 
@@ -201,34 +281,54 @@ async function fetchExamples() {
 }
 ```
 
-**Workflow:**
-1. Define SQLModel in `app/models/`
-2. Create endpoint with `response_model=YourModel`
-3. Include router in `app/api/router.py`
-4. Run `make client-generate`
-5. TypeScript client has full type safety for your model
+**Key features:**
+- SQLModel → TypeScript: Database models become TypeScript types
+- Full IDE autocomplete for requests, responses, model fields
+- Type-safe path parameters and nullability (`str | None` → `string | null`)
 
-**Important:**
-- Re-run `make client-generate` after API changes
-- `openapi.json` and `client/` are gitignored (regenerate as needed)
+**Workflow:** Define SQLModel → Create endpoint → Include in router → Run `make client-generate` → Get typed client
 
 ## Environment Configuration
 
 Required variables in `.env` (see `.env.example`):
 ```env
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-POSTGRES_DB=db
+# PostgreSQL
+POSTGRES_USER=your_postgres_user
+POSTGRES_PASSWORD=your_postgres_password
+POSTGRES_DB=your_database_name
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
+
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# Celery (optional, with defaults)
+CELERY_APP_NAME=app
+CELERY_TIMEZONE=UTC
+CELERY_TASK_TRACK_STARTED=True
+CELERY_TASK_TIME_LIMIT=1800
+CELERY_TASK_SOFT_TIME_LIMIT=1500
+CELERY_RESULT_EXPIRES=3600
+CELERY_TASK_ACKS_LATE=True
+CELERY_WORKER_PREFETCH_MULTIPLIER=4
+CELERY_WORKER_MAX_TASKS_PER_CHILD=1000
+
+# Flower
+FLOWER_PORT=5555
 ```
 
-`DATABASE_URL` is auto-constructed from these components.
+**Auto-constructed URLs** (built from components above):
+- `DATABASE_URL` - `postgresql+asyncpg://user:pass@host:port/db`
+- `CELERY_BROKER_URL` - Redis db 0 (message broker)
+- `CELERY_RESULT_BACKEND` - Redis db 1 (task results)
+- `CELERY_TASKS_MODULE` - Derived from `CELERY_APP_NAME` (default: "app.tasks")
 
-## Important Notes
+## Key Implementation Details
 
-- All database operations are async - always `await`
-- Alembic auto-discovers models from `app/models/` - no manual imports needed
-- Test database auto-created/dropped by fixtures with transaction rollback
-- FastAPI lifespan context manager calls `init_db()` on startup
-- API docs available at http://127.0.0.1:8000/docs
+- **Package manager**: `uv` (not pip/poetry) - use `uv run` prefix for all Python commands
+- **Database**: Async-only (asyncpg driver) - no sync engine available
+- **API responses**: Scalar docs preferred over default Swagger UI
+- **Environment**: Required `.env` file (no defaults for secrets/connection strings)
+- **Docker networking**: Infrastructure services use service names as hostnames (e.g., `POSTGRES_HOST=postgres` in docker-compose, `localhost` for local dev)
+- **Celery worker**: Runs in Docker container, requires infrastructure to be up for task execution
