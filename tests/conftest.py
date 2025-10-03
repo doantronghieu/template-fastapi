@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 import pytest
 import pytest_asyncio
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -34,14 +35,36 @@ TEST_DATABASE_URL = settings.DATABASE_URL.replace(
     f"/{settings.POSTGRES_DB}", f"/{settings.POSTGRES_DB}_test"
 )
 
+# Postgres URL (for creating test database)
+POSTGRES_URL = settings.DATABASE_URL.replace(f"/{settings.POSTGRES_DB}", "/postgres")
+
 
 @pytest_asyncio.fixture(scope="session")
 async def test_engine():
     """Session-scoped async database engine.
 
-    Creates tables once at session start, drops at end. Uses NullPool to avoid
-    connection pooling issues. Automatically used by db_session fixture.
+    Creates test database if it doesn't exist, creates tables once at session
+    start, drops at end. Uses NullPool to avoid connection pooling issues.
     """
+    # Create test database if it doesn't exist
+    postgres_engine = create_async_engine(
+        POSTGRES_URL, isolation_level="AUTOCOMMIT", poolclass=NullPool
+    )
+    async with postgres_engine.connect() as conn:
+        # Check if database exists
+        result = await conn.execute(
+            text(
+                f"SELECT 1 FROM pg_database WHERE datname = '{settings.POSTGRES_DB}_test'"
+            )
+        )
+        exists = result.scalar()
+
+        if not exists:
+            await conn.execute(text(f"CREATE DATABASE {settings.POSTGRES_DB}_test"))
+
+    await postgres_engine.dispose()
+
+    # Create engine for test database
     engine = create_async_engine(TEST_DATABASE_URL, echo=False, poolclass=NullPool)
 
     async with engine.begin() as conn:

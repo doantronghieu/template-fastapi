@@ -29,6 +29,51 @@ services:
       timeout: 5s
       retries: 5
 
+  celery-worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.celery
+    container_name: celery-worker
+    command: uv run celery -A app.core.celery:celery_app worker --loglevel=info
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-db}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_APP_NAME=${CELERY_APP_NAME:-app}
+      - CELERY_TIMEZONE=${CELERY_TIMEZONE:-UTC}
+      - CELERY_TASK_TRACK_STARTED=${CELERY_TASK_TRACK_STARTED:-True}
+      - CELERY_TASK_TIME_LIMIT=${CELERY_TASK_TIME_LIMIT:-1800}
+      - CELERY_TASK_SOFT_TIME_LIMIT=${CELERY_TASK_SOFT_TIME_LIMIT:-1500}
+      - CELERY_RESULT_EXPIRES=${CELERY_RESULT_EXPIRES:-3600}
+      - CELERY_TASK_ACKS_LATE=${CELERY_TASK_ACKS_LATE:-True}
+      - CELERY_WORKER_PREFETCH_MULTIPLIER=${CELERY_WORKER_PREFETCH_MULTIPLIER:-4}
+      - CELERY_WORKER_MAX_TASKS_PER_CHILD=${CELERY_WORKER_MAX_TASKS_PER_CHILD:-1000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  flower:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.celery
+    container_name: flower
+    command: uv run celery -A app.core.celery:celery_app flower --port=${FLOWER_PORT:-5555}
+    ports:
+      - "${FLOWER_PORT:-5555}:${FLOWER_PORT:-5555}"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_APP_NAME=${CELERY_APP_NAME:-app}
+    depends_on:
+      redis:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   redis_data:

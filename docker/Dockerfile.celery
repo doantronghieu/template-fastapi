@@ -1,0 +1,21 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install uv
+RUN pip install uv
+
+# Copy dependency files
+COPY pyproject.toml .
+COPY .python-version* ./
+
+# Install dependencies
+RUN uv sync
+
+# Copy application code
+COPY . .
+
+# Set Python path
+ENV PYTHONPATH=/app
+
+CMD ["uv", "run", "celery", "-A", "app.core.celery:celery_app", "worker", "--loglevel=info"]

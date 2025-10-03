@@ -9,10 +9,10 @@ help:
 	@echo "  make setup           - Create venv and install dependencies"
 	@echo "  make dev             - Start development server (http://127.0.0.1:8000)"
 	@echo ""
-	@echo "  make infra-up        - Start infrastructure (PostgreSQL)"
-	@echo "  make infra-down      - Stop infrastructure"
-	@echo "  make infra-reset     - Destroy and recreate infrastructure"
-	@echo "  make infra-logs      - View infrastructure logs"
+	@echo "  make infra-up        - Start all infrastructure (PostgreSQL, Redis, Celery, Flower)"
+	@echo "  make infra-down      - Stop all infrastructure"
+	@echo "  make infra-reset     - Destroy and recreate all infrastructure"
+	@echo "  make infra-logs      - View all infrastructure logs"
 	@echo ""
 	@echo "  make db-migrate message=\"msg\" - Generate migration"
 	@echo "  make db-upgrade      - Apply migrations"
@@ -43,10 +43,13 @@ dev:
 # ============================================================================
 # Infrastructure (Docker Compose)
 # ============================================================================
-# Services: PostgreSQL 17 (Alpine) with health checks and persistent volumes
+# Services: PostgreSQL 17, Redis 7, Celery worker, Flower monitoring
+# All services run in Docker with health checks and persistent volumes
 # Configure via .env file (see .env.example)
 
-# Start all services in detached mode
+# Start all infrastructure services in detached mode
+# Services: postgres, redis, celery-worker, flower
+# Flower UI: http://127.0.0.1:5555
 infra-up:
 	docker compose up -d
 
@@ -54,13 +57,13 @@ infra-up:
 infra-down:
 	docker compose down
 
-# Destroy volumes and recreate infrastructure with migrations
+# Destroy volumes and recreate all infrastructure with migrations
 infra-reset:
 	@echo "Destroying infrastructure and recreating..."
 	docker compose down -v
 	docker compose up -d
-	@echo "Waiting for PostgreSQL to be ready..."
-	@sleep 3
+	@echo "Waiting for services to be ready..."
+	@sleep 5
 	uv run alembic upgrade head
 	@echo "Infrastructure reset complete!"
 
