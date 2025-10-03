@@ -5,6 +5,7 @@ from fastapi.responses import RedirectResponse
 from scalar_fastapi import get_scalar_api_reference
 
 from app.api.router import api_router
+from app.core.admin import setup_admin
 from app.core.config import settings
 from app.core.database import init_db
 
@@ -24,7 +25,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Setup API routes
 app.include_router(api_router, prefix="/api")
+
+# Setup admin interface
+setup_admin(app)
 
 
 @app.get("/", include_in_schema=False)

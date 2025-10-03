@@ -56,9 +56,19 @@ class Settings(BaseSettings):
         return f"{self.CELERY_APP_NAME}.tasks"
 
     @property
+    def _db_connection_base(self) -> str:
+        """Base PostgreSQL connection string."""
+        return f"{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+
+    @property
     def DATABASE_URL(self) -> str:
-        """Construct database URL from PostgreSQL components."""
-        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        """Construct async database URL from PostgreSQL components."""
+        return f"postgresql+asyncpg://{self._db_connection_base}"
+
+    @property
+    def SYNC_DATABASE_URL(self) -> str:
+        """Construct sync database URL for SQLAlchemy Admin."""
+        return f"postgresql+psycopg2://{self._db_connection_base}"
 
     @property
     def CELERY_BROKER_URL(self) -> str:
