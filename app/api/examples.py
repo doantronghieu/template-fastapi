@@ -1,22 +1,18 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter
 
-from app.core.database import get_session
 from app.models.example import Example
+from app.services.example_service import ExampleServiceDep
 
 router = APIRouter()
 
 
 @router.get("/examples", response_model=list[Example])
-async def get_examples(session: AsyncSession = Depends(get_session)):
+async def get_examples(service: ExampleServiceDep):
     """Get all examples."""
-    result = await session.execute(select(Example))
-    return result.scalars().all()
+    return await service.get_all()
 
 
 @router.get("/examples/{example_id}", response_model=Example)
-async def get_example(example_id: int, session: AsyncSession = Depends(get_session)):
+async def get_example(example_id: int, service: ExampleServiceDep):
     """Get example by ID."""
-    result = await session.execute(select(Example).where(Example.id == example_id))
-    return result.scalar_one_or_none()
+    return await service.get_by_id(example_id)

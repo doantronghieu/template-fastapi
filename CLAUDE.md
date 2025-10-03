@@ -78,12 +78,13 @@ make dev                                      # Start FastAPI server at http://1
 - `app/api/tasks.py` - Celery task trigger and status endpoints
 - `app/core/config.py` - Settings using Pydantic BaseSettings
 - `app/core/database.py` - Async engine, sync engine, session factory, init_db()
+- `app/core/dependencies.py` - Centralized DI providers with type aliases
 - `app/core/templates.py` - Jinja2Templates instance with directory configuration
 - `app/core/admin.py` - SQLAdmin configuration with auto-discovery
 - `app/core/celery.py` - Celery app configuration
 - `app/models/` - SQLModel table definitions (auto-imported by Alembic)
 - `app/schemas/` - Pydantic request/response schemas
-- `app/services/` - Business logic layer
+- `app/services/` - Business logic layer with auto-discovery
 - `app/tasks/` - Celery task definitions
 - `app/admin/views.py` - Admin ModelView classes (auto-registered)
 
@@ -114,14 +115,26 @@ Pydantic BaseSettings with required fields (no defaults for sensitive data). All
 - Both use `settings.DATABASE_ECHO` for SQL logging
 
 **Sessions**: Async sessionmaker with `expire_on_commit=False`
-- Inject via `get_session()` dependency for automatic session management
-- Pattern: Declare `session: AsyncSession = Depends(get_session)` in endpoint parameters
+- Inject via `SessionDep` type alias from `app.core.dependencies`
+- Pattern: `async def endpoint(session: SessionDep)` for clean signatures
 
 **Models**: SQLModel tables in `app/models/`
 - Inherit from `SQLModel` with `table=True` and explicit `__tablename__`
 - Use `Field()` for constraints (primary_key, index, max_length)
 
 **Initialization**: `init_db()` creates all tables at startup via lifespan context manager
+
+### Dependency Injection
+
+**Centralized providers** in `app/core/dependencies.py`
+
+**Service layer pattern** in `app/services/`:
+- Service classes encapsulate business logic (e.g., `ExampleService`)
+- Provider functions return service instances (e.g., `get_example_service(session: SessionDep)`)
+- Type aliases for injection (e.g., `ExampleServiceDep = Annotated[ExampleService, Depends(get_example_service)]`)
+- Auto-discovery: All services automatically imported via `app/services/__init__.py`
+
+**Endpoint pattern**: Inject services via type aliases - `async def endpoint(service: ExampleServiceDep)`
 
 ### Alembic Migrations
 
@@ -153,9 +166,9 @@ Pydantic BaseSettings with required fields (no defaults for sensitive data). All
 - Tags organize endpoints in API docs
 
 **Endpoint pattern**: Create `APIRouter()` at module level
-- Inject `get_session()` dependency for database access
+- Inject services via type aliases (e.g., `service: ExampleServiceDep`)
 - Return SQLModel instances directly (auto-serialized)
-- Use async/await with SQLAlchemy select()
+- Business logic in service layer, endpoints handle HTTP concerns only
 
 **API Documentation**:
 - Scalar UI at http://127.0.0.1:8000/scalar
@@ -214,11 +227,18 @@ See `tests/README.md` for detailed testing guide.
 2. Generate migration: `make db-migrate message="add your_table"`
 3. Apply migration: `make db-upgrade`
 
+### Adding New Service
+
+1. Create service class in `app/services/your_service.py` with business logic
+2. Add provider function returning service instance
+3. Create type alias: `YourServiceDep = Annotated[YourService, Depends(get_your_service)]`
+4. Service auto-exported via `app/services/__init__.py` - no manual import needed
+
 ### Adding New API Endpoint
 
 1. Create router in `app/api/your_endpoints.py` with `APIRouter()` instance
 2. Include in `app/api/router.py` using `api_router.include_router(your_endpoints.router, tags=["tag"])`
-3. Inject `get_session()` dependency for database access
+3. Inject service via type alias: `async def endpoint(service: YourServiceDep)`
 4. Return SQLModel instances or Pydantic schemas
 
 ### Adding Template Page

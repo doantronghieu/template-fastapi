@@ -27,7 +27,7 @@ from sqlalchemy.pool import NullPool
 from sqlmodel import SQLModel
 
 from app.core.config import settings
-from app.core.database import get_session
+from app.core.dependencies import get_session
 from app.main import app
 
 # Test database URL - automatically uses {POSTGRES_DB}_test
