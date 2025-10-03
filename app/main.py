@@ -1,13 +1,15 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from scalar_fastapi import get_scalar_api_reference
 
+from app.api import pages
 from app.api.router import api_router
 from app.core.admin import setup_admin
 from app.core.config import settings
 from app.core.database import init_db
+from app.core.templates import BASE_DIR
 
 
 @asynccontextmanager
@@ -25,16 +27,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Mount static files
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+
+# Setup page routes (templates)
+app.include_router(pages.router)
+
 # Setup API routes
 app.include_router(api_router, prefix="/api")
 
 # Setup admin interface
 setup_admin(app)
-
-
-@app.get("/", include_in_schema=False)
-async def root():
-    return RedirectResponse(url="/scalar")
 
 
 @app.get("/scalar", include_in_schema=False)

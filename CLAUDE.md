@@ -11,6 +11,7 @@ FastAPI template with SQLModel (async SQLAlchemy), PostgreSQL, Redis, Celery tas
 - **SQLModel** 0.0.22+ - SQL databases with Python type hints (SQLAlchemy + Pydantic)
 - **Alembic** 1.14+ - Database migrations with async support
 - **SQLAdmin** 0.20+ - Admin interface for database management
+- **Jinja2** 3.1+ - Server-side templating engine
 - **PostgreSQL 17** (Alpine) - Primary database via Docker
 - **Redis 7** (Alpine) - Message broker for Celery
 - **Celery** 5.5+ - Distributed task queue
@@ -69,13 +70,15 @@ make dev                                      # Start FastAPI server at http://1
 ### Application Structure
 
 **Core application files:**
-- `app/main.py` - FastAPI app with lifespan context manager, Scalar docs at root
+- `app/main.py` - FastAPI app with lifespan context manager, static files, page routes, API routes
 - `app/api/router.py` - Main API router aggregating all endpoint modules
+- `app/api/pages.py` - Page routes returning Jinja2 templates
 - `app/api/health.py` - Health check endpoint
 - `app/api/examples.py` - Example CRUD endpoints
 - `app/api/tasks.py` - Celery task trigger and status endpoints
 - `app/core/config.py` - Settings using Pydantic BaseSettings
 - `app/core/database.py` - Async engine, sync engine, session factory, init_db()
+- `app/core/templates.py` - Jinja2Templates instance with directory configuration
 - `app/core/admin.py` - SQLAdmin configuration with auto-discovery
 - `app/core/celery.py` - Celery app configuration
 - `app/models/` - SQLModel table definitions (auto-imported by Alembic)
@@ -85,6 +88,8 @@ make dev                                      # Start FastAPI server at http://1
 - `app/admin/views.py` - Admin ModelView classes (auto-registered)
 
 **Supporting directories:**
+- `templates/` - Jinja2 templates (base.html, pages, partials)
+- `static/` - CSS, JavaScript, images
 - `tests/` - Pytest suite with async support and fixtures
 - `alembic/` - Database migrations with async support
 - `docker/` - Docker configurations (Dockerfile.celery)
@@ -92,9 +97,9 @@ make dev                                      # Start FastAPI server at http://1
 
 ### Configuration System
 
-**Settings** (`app/core/config.py`): Pydantic BaseSettings with required fields (no defaults for sensitive data). All settings load from `.env` file. Use `.env.example` as template.
+Pydantic BaseSettings with required fields (no defaults for sensitive data). All settings load from `.env` file. Use `.env.example` as template.
 
-**Dynamic properties** construct connection URLs from component variables:
+**Dynamic properties:**
 - `DATABASE_URL` - Async PostgreSQL connection (asyncpg driver)
 - `SYNC_DATABASE_URL` - Sync PostgreSQL connection (psycopg2 driver) for SQLAdmin
 - `CELERY_BROKER_URL` - Redis broker for Celery (db 0)
@@ -103,41 +108,39 @@ make dev                                      # Start FastAPI server at http://1
 
 ### Database Layer
 
-**Engines**: Dual engine setup (`app/core/database.py`)
+**Engines**: Dual engine setup
 - `engine` (async) - For FastAPI endpoints via `create_async_engine()` with asyncpg driver
 - `sync_engine` (sync) - For SQLAdmin interface via `create_engine()` with psycopg2 driver
 - Both use `settings.DATABASE_ECHO` for SQL logging
 
-**Sessions**: Async sessionmaker with `expire_on_commit=False` (`app/core/database.py:17`)
-- Use `get_session()` dependency in endpoints for automatic session management
-- Pattern: `async def endpoint(session: AsyncSession = Depends(get_session))`
+**Sessions**: Async sessionmaker with `expire_on_commit=False`
+- Inject via `get_session()` dependency for automatic session management
+- Pattern: Declare `session: AsyncSession = Depends(get_session)` in endpoint parameters
 
-**Models**: SQLModel tables in `app/models/` (`app/models/example.py`)
-- Inherit from `SQLModel` with `table=True`
-- Set `__tablename__` explicitly
-- Use Field() for constraints (primary_key, index, max_length)
+**Models**: SQLModel tables in `app/models/`
+- Inherit from `SQLModel` with `table=True` and explicit `__tablename__`
+- Use `Field()` for constraints (primary_key, index, max_length)
 
-**Initialization**: `init_db()` creates all tables at startup via lifespan context manager (`app/main.py:12-18`)
+**Initialization**: `init_db()` creates all tables at startup via lifespan context manager
 
 ### Alembic Migrations
 
-**Auto-discovery**: Models auto-imported from `app/models/*.py` via glob pattern (`alembic/env.py:14-18`)
+**Auto-discovery**: Models auto-imported from `app/models/*.py` via glob pattern
 - Add new model file → migrations automatically detect it
-- No need to manually import models in env.py
+- No manual import needed in env.py
 
-**Async support**: Uses `async_engine_from_config` and `run_sync()` (`alembic/env.py:74-86`)
+**Async support**: Uses `async_engine_from_config` and `run_sync()`
 
-**URL override**: `settings.DATABASE_URL` replaces alembic.ini URL at runtime (`alembic/env.py:25`)
+**URL override**: `settings.DATABASE_URL` replaces alembic.ini URL at runtime
 
 ### Celery Task Queue
 
-**Configuration** (`app/core/celery.py`):
-- Broker: Redis db 0, Backend: Redis db 1
+**Configuration**: Broker (Redis db 0), Backend (Redis db 1)
 - Tasks auto-discovered from `app/tasks/` via glob pattern in `__init__.py`
 
 **Task execution**:
-- Trigger: `task_function.delay(*args)` returns AsyncResult with `.id`
-- Status: `AsyncResult(task_id, app=celery_app)` → `.state`, `.result`, `.ready()`
+- Trigger: Call `task_function.delay(*args)` to get AsyncResult with `.id`
+- Status: Use `AsyncResult(task_id, app=celery_app)` to access `.state`, `.result`, `.ready()`
 
 **Docker services**:
 - `celery-worker`: Worker process (background)
@@ -145,40 +148,53 @@ make dev                                      # Start FastAPI server at http://1
 
 ### API Layer
 
-**Router aggregation** (`app/api/router.py`):
-- Main `api_router` includes all endpoint routers
+**Router aggregation**: Main `api_router` includes all endpoint routers
 - Mounted at `/api` prefix in main.py
 - Tags organize endpoints in API docs
 
-**Endpoint pattern** (`app/api/examples.py`):
-- Use `APIRouter()` at module level
-- Depend on `get_session()` for database access
+**Endpoint pattern**: Create `APIRouter()` at module level
+- Inject `get_session()` dependency for database access
 - Return SQLModel instances directly (auto-serialized)
 - Use async/await with SQLAlchemy select()
 
 **API Documentation**:
-- Scalar UI at http://127.0.0.1:8000/scalar (default via root redirect)
+- Scalar UI at http://127.0.0.1:8000/scalar
 - Interactive API reference with all endpoints, schemas, examples
 - OpenAPI schema auto-generated from FastAPI
+
+### Template Layer
+
+**Configuration**: `Jinja2Templates` instance in `app/core/templates.py`
+- Template directory: `templates/` at project root
+- Static files mounted at `/static` in main.py
+
+**Template structure**:
+- `base.html` - Base template with blocks (title, content, extra_css, extra_js)
+- `templates/*.html` - Page templates using `{% extends "base.html" %}`
+- `templates/partials/` - Reusable components via `{% include %}`
+
+**Page routes**: Return `templates.TemplateResponse(template_name, context_dict)`
+- Context must include `"request": request` parameter
+- Set `include_in_schema=False` to exclude from API docs
+
+**Static files**: Reference with `url_for('static', path='/css/style.css')`
 
 ### Admin Interface
 
 **Access**: http://127.0.0.1:8000/admin
 
-**Architecture** (`app/core/admin.py`):
-- Auto-discovers all `ModelView` subclasses from `app/admin/views.py` using `inspect`
+**Architecture**: Auto-discovers all `ModelView` subclasses from `app/admin/views.py`
 - No manual registration needed - just create view class in `app/admin/views.py`
 - Uses `sync_engine` (psycopg2) for database operations
 
 ### Testing Infrastructure
 
-**Configuration** (`pyproject.toml:29-34`):
+**Configuration**:
 - `asyncio_mode = "auto"` - No `@pytest.mark.asyncio` needed
 - `testpaths = ["tests"]`
 - Custom marker: `@pytest.mark.integration` for tests requiring Celery worker
 
-**Test database** (`tests/conftest.py`):
-- Name: `{POSTGRES_DB}_test` (e.g., `db_test`)
+**Test database**: Separate `{POSTGRES_DB}_test` database
 - Tables: Created once per session, dropped at end
 - Isolation: Each test in transaction that rolls back
 
@@ -194,26 +210,34 @@ See `tests/README.md` for detailed testing guide.
 
 ### Adding New Model
 
-1. Create SQLModel class in `app/models/your_model.py` with `table=True` and explicit `__tablename__` - see `app/models/example.py` for pattern
-2. Generate and apply migration: `make db-migrate message="add your_table"` then `make db-upgrade`
+1. Create SQLModel class in `app/models/your_model.py` with `table=True` and explicit `__tablename__`
+2. Generate migration: `make db-migrate message="add your_table"`
+3. Apply migration: `make db-upgrade`
 
 ### Adding New API Endpoint
 
-1. Create router in `app/api/your_endpoints.py` following `app/api/examples.py` pattern
-2. Register in `app/api/router.py`: `api_router.include_router(your_endpoints.router, tags=["your_tag"])`
-3. Use `get_session()` dependency for database access
+1. Create router in `app/api/your_endpoints.py` with `APIRouter()` instance
+2. Include in `app/api/router.py` using `api_router.include_router(your_endpoints.router, tags=["tag"])`
+3. Inject `get_session()` dependency for database access
 4. Return SQLModel instances or Pydantic schemas
+
+### Adding Template Page
+
+1. Create HTML template in `templates/your_page.html` extending `base.html`
+2. Override blocks: `{% block title %}`, `{% block content %}`
+3. Add route in `app/api/pages.py` returning `templates.TemplateResponse("your_page.html", {"request": request})`
+4. Set `include_in_schema=False` on route decorator
 
 ### Adding Celery Task
 
-1. Define task function in `app/tasks/your_tasks.py` with `@celery_app.task(name=f"{settings.CELERY_TASKS_MODULE}.task_name")` decorator - see `app/tasks/example_tasks.py`
-2. Tasks auto-discovered via glob pattern in `app/tasks/__init__.py` - no manual import needed
-3. Trigger in endpoint with `task_function.delay(*args)` or `task_function.apply_async()` for advanced options
+1. Create task in `app/tasks/your_tasks.py` with `@celery_app.task(name=f"{settings.CELERY_TASKS_MODULE}.task_name")`
+2. Tasks auto-discovered via glob pattern - no manual import needed
+3. Trigger with `task_function.delay(*args)` or `task_function.apply_async()` for advanced options
 4. Always use `@celery_app.task` (not `@shared_task`), tasks are synchronous, keep idempotent
 
 ### Adding Admin View
 
-Create `ModelView` subclass in `app/admin/views.py` with `model=YourModel` parameter - auto-registered on startup.
+Create `ModelView` subclass in `app/admin/views.py` with `model=YourModel` - auto-registered on startup.
 
 ### TypeScript Client Generation
 
