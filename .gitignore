@@ -36,3 +36,4 @@ openapi.json
 client/
 
 **/tmp
+**/uv.lock
