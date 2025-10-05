@@ -47,11 +47,11 @@ dev:
 # All services run in Docker with health checks and persistent volumes
 # Configure via .env file (see .env.example)
 
-# Start all infrastructure services in detached mode
+# Start all infrastructure services in detached mode (excluding app)
 # Services: postgres, redis, celery-worker, flower
 # Flower UI: http://127.0.0.1:5555
 infra-up:
-	docker compose up -d
+	docker compose up -d postgres redis celery-worker flower
 
 # Stop and remove all containers (data persists in volumes)
 infra-down:

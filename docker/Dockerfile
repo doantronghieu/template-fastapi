@@ -2,9 +2,10 @@ FROM python:3.12.11-slim-bookworm
 
 WORKDIR /app
 
-# Apply security updates
+# Install system dependencies and security updates
 RUN apt-get update && \
     apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -24,4 +25,8 @@ COPY . .
 # Set Python path
 ENV PYTHONPATH=/app
 
-CMD ["uv", "run", "celery", "-A", "app.core.celery:celery_app", "worker", "--loglevel=info"]
+# Expose FastAPI port (configurable via PORT env var)
+EXPOSE 8000
+
+# Run FastAPI with uvicorn (respects PORT env var from settings)
+CMD ["sh", "-c", "uv run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
