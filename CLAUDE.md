@@ -98,7 +98,9 @@ make dev                                      # Start FastAPI server at http://1
 
 ### Configuration System
 
-Pydantic BaseSettings with required fields (no defaults for sensitive data). All settings load from `.env` file. Use `.env.example` as template.
+Pydantic BaseSettings with required fields (no defaults for sensitive data). All settings load from `.env` file via `python-dotenv` in `app/main.py`. Use `.env.example` as template.
+
+**Environment Loading**: `.env` file loaded into `os.environ` via `load_dotenv()` at app startup - required for third-party libraries (LangChain, etc.) that read from environment variables.
 
 **Dynamic properties:**
 - `DATABASE_URL` - Async PostgreSQL connection (asyncpg driver)
@@ -262,6 +264,14 @@ Create `ModelView` subclass in `app/admin/views.py` with `model=YourModel` - aut
 ### TypeScript Client Generation
 
 Run `make client-generate` to export OpenAPI schema and generate TypeScript client in `./client/` with full type safety (*.ts). SQLModel classes become TypeScript types with full IDE autocomplete.
+
+### Library Testing Pattern
+
+Test library functionality via demo endpoints in `app/api/lib/`:
+- **1:1 mapping**: Each library function gets one test endpoint
+- **Mirror structure**: `app/lib/langchain/` → `app/api/lib/langchain/`
+- **Example**: `app/lib/langchain/llm.py` has `create_chat_model()` and `invoke_model()` → endpoints at `/api/lib/langchain/llm/create-model` and `/api/lib/langchain/llm/invoke`
+- Naming convention: Prefix private items with `_` to exclude from exports
 
 ## Environment Configuration
 

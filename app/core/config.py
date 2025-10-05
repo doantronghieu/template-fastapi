@@ -45,6 +45,14 @@ class Settings(BaseSettings):
     )
     FLOWER_PORT: int = Field(..., description="Flower monitoring UI port")
 
+    # LLM API Keys
+    OPENAI_API_KEY: str | None = Field(
+        default=None, description="OpenAI API key"
+    )
+    GROQ_API_KEY: str | None = Field(
+        default=None, description="Groq API key"
+    )
+
     model_config = SettingsConfigDict(
         case_sensitive=True,
         env_file=".env",

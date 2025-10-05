@@ -12,4 +12,6 @@ Examples:
 
 Use this module for reusable library customizations that are used across
 multiple services but aren't core infrastructure concerns.
+
+Naming convention: Prefix private items with _ to exclude from exports.
 """

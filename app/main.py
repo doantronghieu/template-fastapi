@@ -1,8 +1,12 @@
 from contextlib import asynccontextmanager
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from scalar_fastapi import get_scalar_api_reference
+
+# Load .env file into os.environ before any imports that need env vars
+load_dotenv()
 
 from app.api import pages
 from app.api.router import api_router

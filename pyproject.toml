@@ -23,6 +23,10 @@ dependencies = [
     "httpx>=0.28.1",
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
+    "langchain>=0.3.27",
+    "langchain-openai>=0.3.34",
+    "langchain-groq>=0.3.8",
+    "python-dotenv>=1.1.1",
 ]
 
 [project.optional-dependencies]
