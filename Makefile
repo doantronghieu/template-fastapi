@@ -38,7 +38,7 @@ setup:
 # Start uvicorn dev server with hot reload
 # Server: http://127.0.0.1:8000 | API docs: http://127.0.0.1:8000/docs
 dev:
-	uv run uvicorn app.main:app --reload
+	uv run python -m app.main
 
 # ============================================================================
 # Infrastructure (Docker Compose)

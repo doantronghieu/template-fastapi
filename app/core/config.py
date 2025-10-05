@@ -6,6 +6,9 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "FastAPI Template"
     VERSION: str = "0.1.0"
 
+    # FastAPI
+    PORT: int = Field(default=8000, description="FastAPI server port")
+
     # PostgreSQL
     POSTGRES_USER: str = Field(..., description="PostgreSQL database user")
     POSTGRES_PASSWORD: str = Field(..., description="PostgreSQL database password")
@@ -46,12 +49,8 @@ class Settings(BaseSettings):
     FLOWER_PORT: int = Field(..., description="Flower monitoring UI port")
 
     # LLM API Keys
-    OPENAI_API_KEY: str | None = Field(
-        default=None, description="OpenAI API key"
-    )
-    GROQ_API_KEY: str | None = Field(
-        default=None, description="Groq API key"
-    )
+    OPENAI_API_KEY: str | None = Field(default=None, description="OpenAI API key")
+    GROQ_API_KEY: str | None = Field(default=None, description="Groq API key")
 
     model_config = SettingsConfigDict(
         case_sensitive=True,
