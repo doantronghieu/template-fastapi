@@ -20,10 +20,23 @@ def create_loader(base_dir: Path):
         Tuple of (load_prompt, load_schema) functions
     """
 
-    def load_prompt(name: str) -> str:
-        """Load prompt from prompts/{name}.md"""
+    def load_prompt(name: str, **replacements: str) -> str:
+        """Load prompt from prompts/{name}.md and replace placeholders.
+
+        Args:
+            name: Prompt filename without extension
+            **replacements: Placeholder values (e.g., CURRENT_TIME='2025-10-06')
+
+        Returns:
+            Prompt content with placeholders replaced
+        """
         path = base_dir / "prompts" / f"{name}.md"
-        return path.read_text()
+        content = path.read_text()
+
+        for placeholder, value in replacements.items():
+            content = content.replace(placeholder, value)
+
+        return content
 
     def load_schema(name: str) -> dict:
         """Load JSON schema from schemas/{name}.json"""
