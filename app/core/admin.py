@@ -18,7 +18,12 @@ def setup_admin(app) -> Admin:
 
     # Auto-register all ModelView subclasses from app.admin.views (core)
     for name, obj in inspect.getmembers(views, inspect.isclass):
-        if issubclass(obj, ModelView) and obj is not ModelView:
+        if (
+            issubclass(obj, ModelView)
+            and obj is not ModelView
+            and hasattr(obj, "model")
+            and obj.model is not None
+        ):
             admin.add_view(obj)
 
     # Load extension admin views

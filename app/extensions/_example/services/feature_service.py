@@ -15,6 +15,7 @@ from app.extensions._example.schemas.feature import (
 
 from app.extensions._example.config import extension_settings
 
+
 class ExampleFeatureService:
     """Service for managing example features."""
 
