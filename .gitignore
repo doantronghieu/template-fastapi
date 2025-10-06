@@ -38,3 +38,5 @@ client/
 **/tmp
 **/uv.lock
 **/hotel
+**/*.hotel
+**/.hotel.*
