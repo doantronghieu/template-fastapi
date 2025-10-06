@@ -2,6 +2,7 @@
 
 import importlib
 import logging
+from pathlib import Path
 from typing import Literal
 
 from app.core.config import settings
@@ -9,6 +10,70 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 ExtensionHook = Literal["api", "admin", "tasks", "models"]
+
+
+def get_extension_env_path(config_file_path: str) -> str:
+    """Get extension .env file path without generating it.
+
+    Pattern: .env.[extension_folder_name]
+    Example: app/extensions/_example -> .env._example
+
+    Args:
+        config_file_path: Pass __file__ from the config.py module
+
+    Returns:
+        Path to the .env file in project root
+    """
+    # Get extension folder name from config file path
+    extension_folder = Path(config_file_path).parent.name
+
+    # Project root (3 levels up: config.py -> extension -> extensions -> app -> root)
+    project_root = Path(config_file_path).parent.parent.parent.parent
+
+    # .env file path
+    env_file = project_root / f".env.{extension_folder}"
+
+    return str(env_file)
+
+
+def generate_extension_env(config_file_path: str, settings_class: type) -> None:
+    """Generate .env file for extension if it doesn't exist.
+
+    Introspects Settings class fields to create template.
+
+    Args:
+        config_file_path: Pass __file__ from the config.py module
+        settings_class: Your Settings class
+
+    Example:
+        >>> # In app/extensions/my_extension/config.py
+        >>> class MySettings(BaseSettings):
+        ...     API_KEY: str = Field(default="", description="API key")
+        >>> generate_extension_env(__file__, MySettings)
+    """
+    # Get extension folder name
+    extension_folder = Path(config_file_path).parent.name
+
+    # Get .env file path
+    env_file = Path(get_extension_env_path(config_file_path))
+
+    # Auto-generate if doesn't exist
+    if not env_file.exists():
+        lines = [f"# {extension_folder.upper()} Extension Configuration", ""]
+
+        # Introspect Settings class fields
+        if hasattr(settings_class, "model_fields"):
+            for field_name, field_info in settings_class.model_fields.items():
+                # Get description from Field
+                description = (
+                    field_info.description if field_info.description else field_name
+                )
+                lines.append(f"# {description}")
+                lines.append(f"{field_name}=")
+                lines.append("")
+
+        env_file.write_text("\n".join(lines))
+        logger.info(f"✓ Auto-generated {env_file.name}")
 
 
 def load_extensions(hook: ExtensionHook, *args, **kwargs) -> None:

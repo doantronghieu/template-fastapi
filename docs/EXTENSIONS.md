@@ -20,9 +20,14 @@ echo "ENABLED_EXTENSIONS=my_extension" >> .env
 # app/extensions/my_extension/__init__.py
 # Update setup_*() functions and router prefixes
 
+# app/extensions/my_extension/config.py (optional)
+# Add extension-specific settings if needed
+
 # app/extensions/my_extension/models/feature.py
 # Rename tables with prefix: my_extension_tablename
 ```
+
+**Note**: Edit auto-generated `.env.my_extension` in project root.
 
 ### 3. Generate Database Migrations
 
@@ -40,6 +45,57 @@ cp -r tests/extensions/_example tests/extensions/my_extension
 # Run extension tests
 pytest tests/extensions/my_extension/
 ```
+
+---
+
+## Extension Configuration
+
+Extensions can have their own configuration using Pydantic Settings with separate `.env` files. The system **auto-detects** the extension folder name and **auto-generates** the `.env` file by introspecting your Settings class.
+
+### Creating Extension Config
+
+```python
+# app/extensions/my_extension/config.py
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from app.extensions import generate_extension_env, get_extension_env_path
+
+class MyExtensionSettings(BaseSettings):
+    MY_API_KEY: str = Field(default="", description="API key for service")
+
+    model_config = SettingsConfigDict(
+        case_sensitive=True,
+        env_file=get_extension_env_path(__file__),
+        extra="allow",
+    )
+
+generate_extension_env(__file__, MyExtensionSettings)
+extension_settings = MyExtensionSettings()
+```
+
+Auto-generates `.env.{extension_name}` in project root with `KEY=` (empty values). Fill in values manually.
+
+### Using Extension Config
+
+```python
+from .config import extension_settings
+
+api_key = extension_settings.MY_API_KEY
+```
+
+### Environment File (Auto-Generated)
+
+Auto-generated in project root: `.env.my_extension`
+
+```bash
+# MY_EXTENSION Extension Configuration
+# API key for service
+MY_API_KEY=
+```
+
+Fill in values → restart app → values loaded.
+
+**Priority**: Environment variables > `.env` file > defaults
 
 ---
 
@@ -63,16 +119,19 @@ pytest tests/extensions/my_extension/
 
 ```
 app/extensions/my_extension/
-├── __init__.py         # Extension entry point (setup_*() functions)
-├── models/             # Database models (prefix tables!)
-├── schemas/            # Pydantic schemas
-├── services/           # Business logic
-├── tasks/              # Celery background tasks
-├── api/                # API endpoints
-│   └── router.py       # Route aggregator
-└── admin/              # Admin interface views
+├── __init__.py                  # Extension entry point (setup_*() functions)
+├── config.py                    # Extension-specific settings (optional)
+├── models/                      # Database models (prefix tables!)
+├── schemas/                     # Pydantic schemas
+├── services/                    # Business logic
+├── tasks/                       # Celery background tasks
+├── api/                         # API endpoints
+│   └── router.py                # Route aggregator
+└── admin/                       # Admin interface views
     └── views.py
 ```
+
+**Note**: `.env.my_extension` goes in **project root**, not in extension folder.
 
 ---
 
@@ -103,6 +162,13 @@ ENABLED_EXTENSIONS=extension_a,extension_b,extension_c
 ---
 
 ## Development Workflow
+
+### Creating Configuration
+- Create `BaseSettings` class with `Field(description="...")` for all config vars
+- Set `env_file=get_extension_env_path(__file__)` in `model_config`
+- Call `generate_extension_env(__file__, YourSettingsClass)`
+- Create singleton: `extension_settings = YourSettingsClass()`
+- Edit auto-generated `.env.{extension_name}` file in project root
 
 ### Creating Models
 - Create SQLModel class with `table=True` in `models/feature.py`
@@ -168,12 +234,20 @@ ENABLED_EXTENSIONS=extension_a,extension_b,extension_c
 - ❌ Core → Extensions: Refactor to core
 - ❌ Extension → Extension: Move shared code to core
 
+### Configuration Issues
+- `.env.{extension_name}` in **project root**, not extension directory
+- Empty values in `.env` → empty string (not defaults)
+- Variable names are case-sensitive
+- Check logs for "✓ Auto-generated .env.{extension_name}"
+
 ---
 
 ## Best Practices
 
 1. **Table naming**: Always prefix with `{extension_name}_`
 2. **Self-contained**: Extensions should not depend on each other
-3. **Test coverage**: Write tests for all extension features
-4. **Documentation**: Document extension-specific behavior
-5. **Migration discipline**: Always run migrations with same `ENABLED_EXTENSIONS` as deployment
+3. **Configuration**: Use extension-specific config.py for custom settings
+4. **Environment files**: Keep `.env.{extension_name}` files in project root
+5. **Test coverage**: Write tests for all extension features
+6. **Documentation**: Document extension-specific behavior
+7. **Migration discipline**: Always run migrations with same `ENABLED_EXTENSIONS` as deployment

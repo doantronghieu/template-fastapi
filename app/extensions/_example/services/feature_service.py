@@ -13,6 +13,7 @@ from app.extensions._example.schemas.feature import (
     ExampleFeatureUpdate,
 )
 
+from app.extensions._example.config import extension_settings
 
 class ExampleFeatureService:
     """Service for managing example features."""
@@ -21,7 +22,13 @@ class ExampleFeatureService:
         self.session = session
 
     async def get_all(self) -> list[ExampleFeature]:
-        """Get all example features."""
+        """Get all example features.
+
+        Note: Uses extension config - api_key available via extension_settings.
+        """
+        # Example: Access extension config
+        api_key = extension_settings.EXAMPLE_API_KEY
+        _ = api_key
         result = await self.session.execute(select(ExampleFeature))
         return list(result.scalars().all())
 
