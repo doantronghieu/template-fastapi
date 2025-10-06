@@ -8,17 +8,38 @@ from scalar_fastapi import get_scalar_api_reference
 # Load .env file into os.environ before any imports that need env vars
 load_dotenv()
 
-from app.api import pages
-from app.api.router import api_router
-from app.core.admin import setup_admin
-from app.core.config import settings
-from app.core.database import init_db
-from app.core.templates import BASE_DIR
+from app.api import pages  # noqa: E402
+from app.api.router import api_router  # noqa: E402
+from app.core.admin import setup_admin  # noqa: E402
+from app.core.config import settings  # noqa: E402
+from app.core.database import init_db  # noqa: E402
+from app.core.templates import BASE_DIR  # noqa: E402
+
+
+def get_openapi_tags() -> list[dict]:
+    """Generate OpenAPI tags dynamically based on enabled extensions."""
+    tags = [
+        {"name": "Health", "description": "Health check and status endpoints"},
+        {"name": "Examples", "description": "Example CRUD operations"},
+        {"name": "Tasks", "description": "Celery background task management"},
+    ]
+
+    # Add extension tags dynamically
+    for ext_name in settings.ENABLED_EXTENSIONS:
+        tags.append(
+            {
+                "name": f"{ext_name.replace('_', ' ').title()}",
+                "description": f"🔌 {ext_name} extension features",
+            }
+        )
+
+    return tags
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):
+async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown events."""
+    _ = app  # Unused but required by FastAPI signature
     # Startup: Initialize database tables
     await init_db()
     yield
@@ -29,6 +50,7 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     lifespan=lifespan,
+    openapi_tags=get_openapi_tags(),
 )
 
 # Mount static files

@@ -23,3 +23,8 @@ celery_app.conf.update(
     worker_prefetch_multiplier=settings.CELERY_WORKER_PREFETCH_MULTIPLIER,
     worker_max_tasks_per_child=settings.CELERY_WORKER_MAX_TASKS_PER_CHILD,
 )
+
+# Load extension tasks for Celery discovery
+from app.extensions import load_extensions  # noqa: E402
+
+load_extensions("tasks")

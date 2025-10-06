@@ -17,6 +17,11 @@ for model_file in models_path.glob("*.py"):
         module_name = f"app.models.{model_file.stem}"
         __import__(module_name)
 
+# Import extension models
+from app.extensions import load_extensions  # noqa: E402
+
+load_extensions("models")
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-FastAPI template with SQLModel (async SQLAlchemy), PostgreSQL, Redis, Celery task queue, and API documentation via Scalar. Uses `uv` for dependency management and Docker Compose for infrastructure.
+FastAPI template with SQLModel (async SQLAlchemy), PostgreSQL, Redis, Celery task queue, API documentation via Scalar, and modular extension system for specific customizations. Uses `uv` for dependency management and Docker Compose for infrastructure.
 
 **Tech Stack:**
 - **FastAPI** 0.118+ - Modern, fast web framework
@@ -95,6 +95,8 @@ make dev                                      # Start FastAPI server at http://1
 - `alembic/` - Database migrations with async support
 - `docker/` - Docker configurations (Dockerfile.celery)
 - `scripts/` - Utility scripts (export_openapi.py)
+- `docs/` - Documentation (EXTENSIONS.md)
+- `app/extensions/` - Extension modules (optional, loaded via config)
 
 ### Configuration System
 
@@ -221,6 +223,21 @@ Pydantic BaseSettings with required fields (no defaults for sensitive data). All
 
 See `tests/README.md` for detailed testing guide.
 
+## Extension System
+
+Modular architecture for custom features without affecting core codebase.
+
+**Full Documentation**: See `docs/EXTENSIONS.md` for complete guide.
+
+**Quick Start:**
+- Template: `app/extensions/_example/`
+- Enable: `ENABLED_EXTENSIONS=extension_a` in `.env`
+- Create: `cp -r app/extensions/_example app/extensions/my_extension`
+
+**Key Rules:**
+- Extensions → Core: ✅ | Core → Extensions: ❌ | Extension → Extension: ❌
+- Tables must be prefixed: `{extension_name}_tablename`
+
 ## Development Patterns
 
 ### Adding New Model
@@ -230,48 +247,42 @@ See `tests/README.md` for detailed testing guide.
 3. Apply migration: `make db-upgrade`
 
 ### Adding New Service
-
-1. Create service class in `app/services/your_service.py` with business logic
-2. Add provider function returning service instance
-3. Create type alias: `YourServiceDep = Annotated[YourService, Depends(get_your_service)]`
-4. Service auto-exported via `app/services/__init__.py` - no manual import needed
+- Create class in `app/services/your_service.py` with business logic
+- Add provider function returning service instance
+- Create type alias: `YourServiceDep = Annotated[YourService, Depends(get_your_service)]`
+- Export in `__init__.py`: `from .your_service import YourService, YourServiceDep, get_service` + `__all__` list
 
 ### Adding New API Endpoint
-
-1. Create router in `app/api/your_endpoints.py` with `APIRouter()` instance
-2. Include in `app/api/router.py` using `api_router.include_router(your_endpoints.router, tags=["tag"])`
-3. Inject service via type alias: `async def endpoint(service: YourServiceDep)`
-4. Return SQLModel instances or Pydantic schemas
+- Create `APIRouter` in `app/api/your_endpoints.py` with route handlers
+- Include in `app/api/router.py`: `api_router.include_router(your_endpoints.router, tags=["tag"])`
+- Inject services via type alias: `async def endpoint(service: YourServiceDep)`
+- Return SQLModel instances or Pydantic schemas
 
 ### Adding Template Page
-
-1. Create HTML template in `templates/your_page.html` extending `base.html`
-2. Override blocks: `{% block title %}`, `{% block content %}`
-3. Add route in `app/api/pages.py` returning `templates.TemplateResponse("your_page.html", {"request": request})`
-4. Set `include_in_schema=False` on route decorator
+- Create template in `templates/your_page.html` extending `base.html`
+- Override blocks: `{% block title %}`, `{% block content %}`
+- Add route in `app/api/pages.py` returning `templates.TemplateResponse("your_page.html", {"request": request})`
+- Set `include_in_schema=False` on route decorator
 
 ### Adding Celery Task
-
-1. Create task in `app/tasks/your_tasks.py` with `@celery_app.task(name=f"{settings.CELERY_TASKS_MODULE}.task_name")`
-2. Tasks auto-discovered via glob pattern - no manual import needed
-3. Trigger with `task_function.delay(*args)` or `task_function.apply_async()` for advanced options
-4. Always use `@celery_app.task` (not `@shared_task`), tasks are synchronous, keep idempotent
+- Create task in `app/tasks/your_tasks.py` with `@celery_app.task(name=f"{settings.CELERY_TASKS_MODULE}.task_name")`
+- Add `auto_import(__file__, "app.tasks")` to `tasks/__init__.py`
+- Trigger: `task_function.delay(*args)` or `.apply_async()` for options
 
 ### Adding Admin View
+- Create `ModelView` subclass in `app/admin/views.py` with `model=YourModel` - auto-registered
 
-Create `ModelView` subclass in `app/admin/views.py` with `model=YourModel` - auto-registered on startup.
+### Package Exports
+- **Models/Services/Schemas**: Explicit imports + `__all__ = ["YourClass"]`
+- **Tasks**: `auto_import(__file__, "app.tasks")` for Celery registration
+- **Private**: Prefix with `_` to exclude
 
-### TypeScript Client Generation
+### TypeScript Client
+- Run `make client-generate` for TypeScript client in `./client/` with full type safety
 
-Run `make client-generate` to export OpenAPI schema and generate TypeScript client in `./client/` with full type safety (*.ts). SQLModel classes become TypeScript types with full IDE autocomplete.
-
-### Library Testing Pattern
-
-Test library functionality via demo endpoints in `app/api/lib/`:
-- **1:1 mapping**: Each library function gets one test endpoint
-- **Mirror structure**: `app/lib/langchain/` → `app/api/lib/langchain/`
-- **Example**: `app/lib/langchain/llm.py` has `create_chat_model()` and `invoke_model()` → endpoints at `/api/lib/langchain/llm/create-model` and `/api/lib/langchain/llm/invoke`
-- Naming convention: Prefix private items with `_` to exclude from exports
+### Library Testing
+- Test via test endpoints in `app/api/lib/` (1:1 mapping with `app/lib/`). Each library function gets one test endpoint
+- Mirror structure: `app/lib/[LIB]/` → `app/api/lib/[LIB]/`
 
 ## Environment Configuration
 

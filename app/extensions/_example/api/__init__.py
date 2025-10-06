@@ -1,0 +1,1 @@
+"""Example extension API endpoints."""

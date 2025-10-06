@@ -26,9 +26,14 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import NullPool
 from sqlmodel import SQLModel
 
-from app.core.config import settings
-from app.core.dependencies import get_session
-from app.main import app
+import os
+
+# Enable _example extension for testing (before app import)
+os.environ.setdefault("ENABLED_EXTENSIONS", "_example")
+
+from app.core.config import settings  # noqa: E402
+from app.core.dependencies import get_session  # noqa: E402
+from app.main import app  # noqa: E402
 
 # Test database URL - automatically uses {POSTGRES_DB}_test
 TEST_DATABASE_URL = settings.DATABASE_URL.replace(

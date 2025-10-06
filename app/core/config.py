@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -47,6 +47,22 @@ class Settings(BaseSettings):
         ..., description="Restart worker after N tasks to prevent memory leaks"
     )
     FLOWER_PORT: int = Field(..., description="Flower monitoring UI port")
+
+    # Extensions
+    ENABLED_EXTENSIONS: str | list[str] = Field(
+        default="",
+        description="Comma-separated extensions (e.g., 'ext_a,ext_b') or empty for core only",
+    )
+
+    @field_validator("ENABLED_EXTENSIONS", mode="before")
+    @classmethod
+    def parse_extensions(cls, v):
+        """Parse comma-separated string to list."""
+        if isinstance(v, str):
+            if not v.strip():
+                return []
+            return [x.strip() for x in v.split(",") if x.strip()]
+        return v or []
 
     model_config = SettingsConfigDict(
         case_sensitive=True,

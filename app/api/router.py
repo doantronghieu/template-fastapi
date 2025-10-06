@@ -1,10 +1,15 @@
 from fastapi import APIRouter
 
-from app.api import examples, health, tasks
-from app.api import lib
+from app.api import examples, health, lib, tasks
+from app.extensions import load_extensions
 
 api_router = APIRouter()
-api_router.include_router(health.router, tags=["health"])
-api_router.include_router(examples.router, tags=["examples"])
-api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
+
+# Core API routes
+api_router.include_router(health.router, tags=["Health"])
+api_router.include_router(examples.router, tags=["Examples"])
+api_router.include_router(tasks.router, prefix="/tasks", tags=["Tasks"])
 api_router.include_router(lib.router, prefix="/lib")
+
+# Load extension API routes
+load_extensions("api", api_router)
