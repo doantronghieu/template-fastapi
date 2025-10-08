@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.openapi.utils import get_openapi
 from fastapi.staticfiles import StaticFiles
 from scalar_fastapi import get_scalar_api_reference
 
@@ -13,27 +14,8 @@ from app.api.router import api_router  # noqa: E402
 from app.core.admin import setup_admin  # noqa: E402
 from app.core.config import settings  # noqa: E402
 from app.core.database import init_db  # noqa: E402
+from app.core.openapi_tags import get_openapi_tags, get_tag_groups  # noqa: E402
 from app.core.templates import BASE_DIR  # noqa: E402
-
-
-def get_openapi_tags() -> list[dict]:
-    """Generate OpenAPI tags dynamically based on enabled extensions."""
-    tags = [
-        {"name": "Health", "description": "Health check and status endpoints"},
-        {"name": "Examples", "description": "Example CRUD operations"},
-        {"name": "Tasks", "description": "Celery background task management"},
-    ]
-
-    # Add extension tags dynamically
-    for ext_name in settings.ENABLED_EXTENSIONS:
-        tags.append(
-            {
-                "name": f"{ext_name.replace('_', ' ').title()}",
-                "description": f"🔌 {ext_name} extension features",
-            }
-        )
-
-    return tags
 
 
 @asynccontextmanager
@@ -50,7 +32,11 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     lifespan=lifespan,
-    openapi_tags=get_openapi_tags(),
+    openapi_tags=get_openapi_tags(
+        extension_tags=[
+            ext.replace("_", " ").title() for ext in settings.ENABLED_EXTENSIONS
+        ]
+    ),
 )
 
 # Mount static files
@@ -64,6 +50,36 @@ app.include_router(api_router, prefix="/api")
 
 # Setup admin interface
 setup_admin(app)
+
+
+def custom_openapi():
+    """Customize OpenAPI schema with x-tagGroups for nested navigation."""
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        openapi_version=app.openapi_version,
+        description=app.description,
+        routes=app.routes,
+        tags=app.openapi_tags,
+    )
+
+    # Add x-tagGroups for nested navigation in Scalar
+    extension_tags = [
+        ext.replace("_", " ").title() for ext in settings.ENABLED_EXTENSIONS
+    ]
+    openapi_schema["x-tagGroups"] = get_tag_groups(
+        extension_tags=extension_tags if extension_tags else None
+    )
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+# Override default OpenAPI schema generator
+app.openapi = custom_openapi
 
 
 @app.get("/scalar", include_in_schema=False)

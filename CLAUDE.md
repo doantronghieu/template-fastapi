@@ -79,6 +79,7 @@ make dev                                      # Start FastAPI server at http://1
 - `app/core/config.py` - Settings using Pydantic BaseSettings
 - `app/core/database.py` - Async engine, sync engine, session factory, init_db()
 - `app/core/dependencies.py` - Centralized DI providers with type aliases
+- `app/core/openapi_tags.py` - Type-safe tag registry for API documentation
 - `app/core/templates.py` - Jinja2Templates instance with directory configuration
 - `app/core/admin.py` - SQLAdmin configuration with auto-discovery
 - `app/core/celery.py` - Celery app configuration
@@ -130,15 +131,20 @@ Pydantic BaseSettings with required fields (no defaults for sensitive data). All
 
 ### Dependency Injection
 
-**Centralized providers** in `app/core/dependencies.py`
+**Core dependencies** in `app/core/dependencies.py`:
+- Database sessions, settings, core app concerns only
 
 **Service layer pattern** in `app/services/`:
-- Service classes encapsulate business logic (e.g., `ExampleService`)
-- Provider functions return service instances (e.g., `get_example_service(session: SessionDep)`)
-- Type aliases for injection (e.g., `ExampleServiceDep = Annotated[ExampleService, Depends(get_example_service)]`)
-- Auto-discovery: All services automatically imported via `app/services/__init__.py`
+- Service classes encapsulate business logic
+- Provider functions return service instances
+- Type aliases for injection: `ServiceDep = Annotated[Service, Depends(get_service)]`
+- Auto-discovery: All services automatically imported via `__init__.py`
 
-**Endpoint pattern**: Inject services via type aliases - `async def endpoint(service: ExampleServiceDep)`
+**Library dependencies** co-located with libraries:
+- Each library manages its own dependencies in `app/lib/{library}/dependencies.py`
+- Keeps library concerns separate from core app concerns
+
+**Endpoint pattern**: Inject via type aliases for clean signatures
 
 ### Alembic Migrations
 
@@ -175,9 +181,18 @@ Pydantic BaseSettings with required fields (no defaults for sensitive data). All
 - Business logic in service layer, endpoints handle HTTP concerns only
 
 **API Documentation**:
-- Scalar UI at http://127.0.0.1:8000/scalar
+- Scalar UI at http://127.0.0.1:8000/scalar with nested navigation via x-tagGroups
 - Interactive API reference with all endpoints, schemas, examples
 - OpenAPI schema auto-generated from FastAPI
+- Centralized tag management in `app/core/openapi_tags.py` for type safety
+
+**Tag Management System**:
+- Single source of truth: `TagGroup` enum and `APITag` enum
+- Tag metadata maps each tag to description and group assignment
+- Auto-generation: `get_openapi_tags()` creates tag metadata, `get_tag_groups()` creates x-tagGroups
+- Type-safe usage: Import `APITag` in routers, use `tags=[APITag.HEALTH]` instead of string literals
+- Adding new tag: Add enum value + metadata entry (2 lines total) in `app/core/openapi_tags.py`
+- Prevents typos, enables IDE autocomplete, eliminates repetition across files
 
 ### Template Layer
 
@@ -237,6 +252,65 @@ Modular architecture for custom features without affecting core codebase.
 **Key Rules:**
 - Extensions → Core: ✅ | Core → Extensions: ❌ | Extension → Extension: ❌
 - Tables must be prefixed: `{extension_name}_tablename`
+
+## Library Architecture Pattern
+
+Organization strategy for integrating third-party libraries with pluggable provider support via the Strategy pattern.
+
+### Universal vs Library-Specific Architecture
+
+**Decision criteria for abstraction layers:**
+
+Create abstraction in `app/lib/{capability}/` when:
+- Multiple providers offer same functionality (LLM, embeddings, etc.)
+- Runtime provider switching needed via configuration
+- Interface relatively standardized across providers
+- Business logic should be provider-agnostic
+
+Keep in library directory `app/lib/{library}/` when:
+- Feature unique to one library (chains, agents, retrievers, etc.)
+- No equivalent functionality in other providers
+- Tightly coupled to library-specific patterns
+- Abstraction would be premature or forced
+
+**Directory structure:**
+```
+app/lib/
+├── {capability}/             # Abstraction: base.py (Protocol), config.py (enums),
+│                             # factory.py (selection), dependencies.py (DI)
+└── {library}/                # Implementation: {capability}.py (provider class),
+                              # {feature}.py (library-specific), dependencies.py
+```
+
+Avoid deep nesting (`app/lib/ai/llm/`) - use flat structure with clear capability names.
+
+### Provider Implementation Pattern
+
+**Interface and naming:**
+- Define interface using `Protocol` or `ABC` in `base.py`
+- Name providers specifically: `{Library}{Capability}Provider` (e.g., `LangChainLLMProvider`)
+- Each library implements protocol in its own directory
+- Avoids generic names, enables multiple capabilities per library
+
+**Factory with type-safe configuration:**
+- Create provider type enum in config (e.g., `LLMProviderType`)
+- Factory maps enum values to provider classes for runtime selection
+- Settings import enum and use `.value` for defaults
+- Ensures consistency, prevents typos, validates at startup
+
+**Dependency injection:**
+- Co-locate: library deps in `app/lib/{library}/dependencies.py`, core deps in `app/core/dependencies.py`
+- Pattern: provider function returns instance, type alias for injection via `Annotated[Type, Depends(fn)]`
+- Use `TYPE_CHECKING` guard to avoid circular imports
+- Inject in endpoints via type alias parameter for clean signatures
+
+### Test Schema Organization
+
+**Separation strategy:**
+- Domain/business schemas: `app/schemas/` for production endpoints
+- Library test schemas: `app/api/lib/schemas/{capability}.py` for testing
+- Use directory (not single file) organized by capability
+- Share schemas across related test endpoints to avoid duplication
 
 ## Schema and Model Patterns
 
@@ -334,9 +408,11 @@ Modular architecture for custom features without affecting core codebase.
 
 ### Adding New API Endpoint
 - Create `APIRouter` in `app/api/your_endpoints.py` with route handlers
-- Include in `app/api/router.py`: `api_router.include_router(your_endpoints.router, tags=["tag"])`
+- Import `APITag` from `app.core.openapi_tags` for type-safe tag usage
+- Include in `app/api/router.py`: `api_router.include_router(your_endpoints.router, tags=[APITag.YOUR_TAG])`
 - Inject services via type alias: `async def endpoint(service: YourServiceDep)`
 - Return SQLModel instances or Pydantic schemas
+- If adding new tag: Define in `APITag` enum and `TAG_METADATA` in `app/core/openapi_tags.py`
 
 ### Adding Template Page
 - Create template in `templates/your_page.html` extending `base.html`
@@ -360,9 +436,19 @@ Modular architecture for custom features without affecting core codebase.
 ### TypeScript Client
 - Run `make client-generate` for TypeScript client in `./client/` with full type safety
 
-### Library Testing
-- Test via test endpoints in `app/api/lib/` (1:1 mapping with `app/lib/`). Each library function gets one test endpoint
-- Mirror structure: `app/lib/[LIB]/` → `app/api/lib/[LIB]/`
+### Adding Library Integration
+
+**Universal capabilities** (create abstraction):
+1. Abstraction layer in `app/lib/{capability}/`: protocol (base.py), enums (config.py), factory, dependencies
+2. Provider implementation in `app/lib/{library}/{capability}.py` named `{Library}{Capability}Provider`
+3. Register: add enum value, map to class in factory, update settings default
+4. Test endpoints: schemas in `app/api/lib/schemas/{capability}.py`, endpoints use DI
+
+**Library-specific features** (no abstraction):
+1. Implementation in `app/lib/{library}/{feature}.py`
+2. Optional test endpoints in `app/api/lib/{library}/{feature}.py`
+
+**Testing pattern**: Mirror `app/lib/` structure in `app/api/lib/` with 1:1 endpoint mapping, share schemas via `app/api/lib/schemas/`
 
 ## Environment Configuration
 

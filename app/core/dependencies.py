@@ -1,4 +1,4 @@
-"""Centralized dependency injection providers."""
+"""Centralized dependency injection providers for core application components."""
 
 from collections.abc import AsyncGenerator
 from typing import Annotated

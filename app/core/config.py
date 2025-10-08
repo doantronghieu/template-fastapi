@@ -1,6 +1,8 @@
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.lib.llm.config import LLMProviderType
+
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "FastAPI Template"
@@ -47,6 +49,12 @@ class Settings(BaseSettings):
         ..., description="Restart worker after N tasks to prevent memory leaks"
     )
     FLOWER_PORT: int = Field(..., description="Flower monitoring UI port")
+
+    # LLM
+    LLM_PROVIDER: str = Field(
+        default=LLMProviderType.LANGCHAIN.value,
+        description="LLM provider (e.g., 'langchain', 'litellm')",
+    )
 
     # Extensions
     ENABLED_EXTENSIONS: str | list[str] = Field(

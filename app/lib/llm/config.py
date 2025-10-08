@@ -1,6 +1,16 @@
-"""LLM configuration enums and mappings."""
+"""LLM configuration enums and mappings.
+
+Shared configuration used across all LLM provider implementations.
+"""
 
 from enum import Enum
+
+
+class LLMProviderType(str, Enum):
+    """Supported LLM provider types for runtime selection."""
+
+    LANGCHAIN = "langchain"
+    OPENAI = "openai"
 
 
 class ModelProvider(str, Enum):
