@@ -2,28 +2,31 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field as PydanticField
+from pydantic import BaseModel, Field, field_validator
 
-
-class ExampleFeatureBase(BaseModel):
-    """Base schema with common fields."""
-
-    name: str = PydanticField(..., min_length=1)
-    description: str | None = None
-    is_active: bool = True
+from ..models.feature import ExampleFeatureBase
 
 
 class ExampleFeatureCreate(ExampleFeatureBase):
     """Schema for creating example features."""
 
-    pass
+    @field_validator("name")
+    @classmethod
+    def validate_name_not_empty(cls, v: str) -> str:
+        """Ensure name is not empty (additional validation on inherited field)."""
+        if not v or not v.strip():
+            raise ValueError("Name cannot be empty")
+        return v.strip()
 
 
 class ExampleFeatureUpdate(BaseModel):
-    """Schema for updating example features."""
+    """Schema for updating example features.
 
-    name: str | None = None
-    description: str | None = None
+    Note: Does not inherit from base because all fields are optional for partial updates.
+    """
+
+    name: str | None = Field(None, min_length=1, max_length=255)
+    description: str | None = Field(None, max_length=500)
     is_active: bool | None = None
 
 
@@ -33,6 +36,3 @@ class ExampleFeatureRead(ExampleFeatureBase):
     id: int
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
