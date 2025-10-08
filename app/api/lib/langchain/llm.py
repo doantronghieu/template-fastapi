@@ -65,4 +65,4 @@ async def test_invoke_model(req: InvokeModelRequest):
         return StreamingResponse(generate(), media_type="text/plain")
 
     # Return invoke/batch results as JSON
-    return {"result": result}
+    return {"response": result}
