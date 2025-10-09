@@ -72,36 +72,43 @@ CHANNELS = [
         "user_id": uid(2),
         "channel_id": "telegram_alice_smith",
         "channel_type": ChannelType.TELEGRAM,
+        "is_primary": True,
     },
     {
         "user_id": uid(4),
         "channel_id": "telegram_5678",
         "channel_type": ChannelType.TELEGRAM,
+        "is_primary": True,
     },
     {
         "user_id": uid(5),
         "channel_id": "whatsapp_1234",
         "channel_type": ChannelType.WHATSAPP,
+        "is_primary": True,
     },
     {
         "user_id": uid(6),
         "channel_id": "messenger_9012",
         "channel_type": ChannelType.MESSENGER,
+        "is_primary": True,
     },
     {
         "user_id": uid(7),
         "channel_id": "zalo_3456",
         "channel_type": ChannelType.ZALO,
+        "is_primary": True,
     },
     {
         "user_id": uid(8),
         "channel_id": "instagram_7890",
         "channel_type": ChannelType.INSTAGRAM,
+        "is_primary": True,
     },
     {
         "user_id": uid(9),
         "channel_id": "tiktok_2468",
         "channel_type": ChannelType.TIKTOK,
+        "is_primary": True,
     },
 ]
 
