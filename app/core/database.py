@@ -10,6 +10,8 @@ engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.DATABASE_ECHO,
     future=True,
+    # Disable prepared statement cache for Supabase poolers (pgbouncer compatibility)
+    connect_args={"statement_cache_size": 0},
 )
 
 # Create sync engine for SQLAlchemy Admin

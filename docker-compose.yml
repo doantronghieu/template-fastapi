@@ -1,21 +1,25 @@
 services:
-  postgres:
-    image: postgres:17-alpine
-    container_name: postgres
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-db}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+  # PostgreSQL - Disabled (using Supabase instead)
+  # Uncomment if you want to use local PostgreSQL
+  # postgres:
+  #   image: postgres:17-alpine
+  #   container_name: postgres
+  #   environment:
+  #     POSTGRES_USER: ${POSTGRES_USER:-postgres}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+  #     POSTGRES_DB: ${POSTGRES_DB:-db}
+  #   ports:
+  #     - "${POSTGRES_PORT:-5432}:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 5
 
+  # FastAPI App (optional - for containerized deployment)
+  # For development, use: make dev (runs locally with Supabase connection)
   app:
     build:
       context: .
@@ -23,15 +27,12 @@ services:
     container_name: fastapi-app
     env_file: .env
     environment:
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      # Database credentials from .env (Supabase)
     ports:
       - "${PORT:-8000}:${PORT:-8000}"
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
@@ -62,13 +63,10 @@ services:
     command: uv run celery -A app.core.celery:celery_app worker --loglevel=info
     env_file: .env
     environment:
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      # Database credentials from .env (Supabase)
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
 
@@ -89,5 +87,5 @@ services:
         condition: service_healthy
 
 volumes:
-  postgres_data:
+  # postgres_data:  # Disabled - using Supabase
   redis_data:

@@ -1,7 +1,7 @@
 # FastAPI Template - Development Operations
 # Quick Start: make setup → cp .env.example .env → make infra-up → make db-migrate message="init" → make db-upgrade → make dev
 
-.PHONY: help setup dev test lint format clean db-migrate db-upgrade db-downgrade infra-up infra-down infra-reset infra-logs client-generate
+.PHONY: help setup dev test lint format clean db-migrate db-upgrade db-downgrade db-reset db-seed infra-up infra-down infra-reset infra-logs client-generate
 
 help:
 	@echo "FastAPI Template - Available Commands"
@@ -9,14 +9,16 @@ help:
 	@echo "  make setup           - Create venv and install dependencies"
 	@echo "  make dev             - Start development server (http://127.0.0.1:8000)"
 	@echo ""
-	@echo "  make infra-up        - Start all infrastructure (PostgreSQL, Redis, Celery, Flower)"
-	@echo "  make infra-down      - Stop all infrastructure"
-	@echo "  make infra-reset     - Destroy and recreate all infrastructure"
-	@echo "  make infra-logs      - View all infrastructure logs"
+	@echo "  make infra-up        - Start infrastructure (Redis, Celery, Flower)"
+	@echo "  make infra-down      - Stop infrastructure"
+	@echo "  make infra-reset     - Destroy and recreate infrastructure"
+	@echo "  make infra-logs      - View infrastructure logs"
 	@echo ""
 	@echo "  make db-migrate message=\"msg\" - Generate migration"
 	@echo "  make db-upgrade      - Apply migrations"
 	@echo "  make db-downgrade    - Rollback migration"
+	@echo "  make db-reset        - Reset database to fresh state (⚠️  deletes all data)"
+	@echo "  make db-seed         - Seed database with test data"
 	@echo ""
 	@echo "  make test            - Run all tests"
 	@echo "  make lint            - Run linter"
@@ -43,28 +45,28 @@ dev:
 # ============================================================================
 # Infrastructure (Docker Compose)
 # ============================================================================
-# Services: PostgreSQL 17, Redis 7, Celery worker, Flower monitoring
+# Services: Redis 7, Celery worker, Flower monitoring
+# Database: Using Supabase (configured in .env)
 # All services run in Docker with health checks and persistent volumes
-# Configure via .env file (see .env.example)
 
 # Start all infrastructure services in detached mode (excluding app)
-# Services: postgres, redis, celery-worker, flower
+# Services: redis, celery-worker, flower
 # Flower UI: http://127.0.0.1:5555
 infra-up:
-	docker compose up -d postgres redis celery-worker flower
+	docker compose up -d redis celery-worker flower
 
 # Stop and remove all containers (data persists in volumes)
 infra-down:
 	docker compose down
 
-# Destroy volumes and recreate all infrastructure with migrations
+# Destroy volumes and recreate all infrastructure (Redis, Celery, Flower)
+# Note: Database is on Supabase - use 'make db-reset' to reset database
 infra-reset:
 	@echo "Destroying infrastructure and recreating..."
 	docker compose down -v
-	docker compose up -d
+	docker compose up -d redis celery-worker flower
 	@echo "Waiting for services to be ready..."
-	@sleep 5
-	uv run alembic upgrade head
+	@sleep 3
 	@echo "Infrastructure reset complete!"
 
 # View logs from all services (Ctrl+C to exit)
@@ -87,6 +89,23 @@ db-upgrade:
 # Rollback last migration
 db-downgrade:
 	uv run alembic downgrade -1
+
+# Reset database to fresh state (drops all tables via Alembic, then recreates)
+# WARNING: This will delete ALL data in the database!
+db-reset:
+	@echo "⚠️  WARNING: This will delete ALL tables and data!"
+	@echo "Press Ctrl+C to cancel, or Enter to continue..."
+	@read confirm
+	@echo "Downgrading to base (removing all tables)..."
+	uv run alembic downgrade base
+	@echo "Upgrading to head (recreating all tables)..."
+	uv run alembic upgrade head
+	@echo "✓ Database reset complete!"
+
+# Seed database with test data for development
+db-seed:
+	@echo "Seeding database with test data..."
+	@PYTHONPATH=. uv run python scripts/seed_test_data.py
 
 # ============================================================================
 # Code Quality & Testing

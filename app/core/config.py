@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -85,17 +87,24 @@ class Settings(BaseSettings):
 
     @property
     def _db_connection_base(self) -> str:
-        """Base PostgreSQL connection string."""
-        return f"{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        """Base PostgreSQL connection string with URL-encoded credentials."""
+        # URL-encode username and password to handle special characters (@, :, etc.)
+        user = quote(self.POSTGRES_USER, safe="")
+        password = quote(self.POSTGRES_PASSWORD, safe="")
+        return f"{user}:{password}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
     @property
     def DATABASE_URL(self) -> str:
-        """Construct async database URL from PostgreSQL components."""
+        """Construct async database URL from PostgreSQL components.
+
+        Uses URL-encoded credentials to handle special characters.
+        For Supabase: Works with Session Pooler and Direct Connection.
+        """
         return f"postgresql+asyncpg://{self._db_connection_base}"
 
     @property
     def SYNC_DATABASE_URL(self) -> str:
-        """Construct sync database URL for SQLAlchemy Admin."""
+        """Construct sync database URL for SQLAdmin (uses psycopg2, not asyncpg)."""
         return f"postgresql+psycopg2://{self._db_connection_base}"
 
     @property

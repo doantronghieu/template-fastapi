@@ -20,9 +20,10 @@ asyncio_mode = "auto"  # Auto-detect async tests, no decorators needed
 ```
 
 **Test Database:**
-- Name: `{POSTGRES_DB}_test` (e.g., `db_test`)
+- Name: `{POSTGRES_DB}_test` (e.g., `postgres_test` on Supabase)
 - Tables: Created once per session, dropped at end
 - Isolation: Each test runs in transaction that rolls back
+- Uses same Supabase connection as development (configured in `.env`)
 
 ## Fixtures
 
@@ -113,8 +114,9 @@ uv run pytest -v -s tests/test_example.py::test_create  # Specific test verbose
 ## Common Issues
 
 **Database connection:**
-- Start PostgreSQL: `make infra-up`
-- Check database: `docker exec postgres psql -U postgres -l`
+- Ensure `.env` has valid Supabase credentials
+- Test database `{POSTGRES_DB}_test` is auto-created on Supabase
+- Start infrastructure: `make infra-up` (Redis/Celery only)
 
 **Async errors:**
 - Use `async def` for async fixtures
@@ -124,14 +126,15 @@ uv run pytest -v -s tests/test_example.py::test_create  # Specific test verbose
 - Use `db_session` fixture (auto-rollback)
 - Don't commit in production code during tests
 
-## Manual Database
+## Test Database Management
 
+The test database (`{POSTGRES_DB}_test`) is automatically created on Supabase when tests run. No manual setup required.
+
+To manually reset test database:
 ```bash
-# Create test database
-docker exec postgres psql -U postgres -c "CREATE DATABASE db_test;"
-
-# Drop test database
-docker exec postgres psql -U postgres -c "DROP DATABASE db_test;"
+# Via Supabase SQL Editor or psql
+DROP DATABASE IF EXISTS postgres_test;
+CREATE DATABASE postgres_test;
 ```
 
 ## Best Practices

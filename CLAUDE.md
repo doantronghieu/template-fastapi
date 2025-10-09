@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-FastAPI template with SQLModel (async SQLAlchemy), PostgreSQL, Redis, Celery task queue, API documentation via Scalar, and modular extension system for specific customizations. Uses `uv` for dependency management and Docker Compose for infrastructure.
+FastAPI template with SQLModel (async SQLAlchemy), Supabase (PostgreSQL), Redis, Celery task queue, API documentation via Scalar, and modular extension system for specific customizations. Uses `uv` for dependency management and Docker Compose for infrastructure.
 
 **Tech Stack:**
 - **FastAPI** 0.118+ - Modern, fast web framework
@@ -12,8 +12,8 @@ FastAPI template with SQLModel (async SQLAlchemy), PostgreSQL, Redis, Celery tas
 - **Alembic** 1.14+ - Database migrations with async support
 - **SQLAdmin** 0.20+ - Admin interface for database management
 - **Jinja2** 3.1+ - Server-side templating engine
-- **PostgreSQL 17** (Alpine) - Primary database via Docker
-- **Redis 7** (Alpine) - Message broker for Celery
+- **Supabase** - Cloud PostgreSQL database with Session Pooler
+- **Redis 7** (Alpine) - Message broker for Celery (Docker)
 - **Celery** 5.5+ - Distributed task queue
 - **Flower** 2.0+ - Celery monitoring UI
 - **Python** 3.10+ - Uses modern union syntax (`int | None`)
@@ -24,10 +24,9 @@ FastAPI template with SQLModel (async SQLAlchemy), PostgreSQL, Redis, Celery tas
 ```bash
 # Initial setup (one-time)
 make setup                                    # Create venv and install dependencies
-cp .env.example .env                          # Configure environment variables
-make infra-up                                 # Start PostgreSQL, Redis, Celery, Flower
-make db-migrate message="init"                # Generate initial migration
-make db-upgrade                               # Apply migrations
+cp .env.example .env                          # Configure environment variables (add Supabase credentials)
+make infra-up                                 # Start Redis, Celery, Flower
+make db-upgrade                               # Apply migrations to Supabase
 
 # Development workflow
 make dev                                      # Start FastAPI server at http://127.0.0.1:8000
@@ -42,15 +41,17 @@ make dev                                      # Start FastAPI server at http://1
 - `make test` - Run pytest suite
 
 ### Infrastructure (Docker Compose)
-- `make infra-up` - Start PostgreSQL, Redis, Celery worker, Flower (http://127.0.0.1:5555)
+- `make infra-up` - Start Redis, Celery worker, Flower (http://127.0.0.1:5555)
 - `make infra-down` - Stop all containers (preserves data in volumes)
-- `make infra-reset` - Destroy volumes and recreate infrastructure with migrations
+- `make infra-reset` - Destroy volumes and recreate infrastructure
 - `make infra-logs` - Follow logs from all services
 
 ### Database Migrations (Alembic)
 - `make db-migrate message="description"` - Generate migration (auto-detects model changes)
-- `make db-upgrade` - Apply pending migrations
+- `make db-upgrade` - Apply pending migrations to Supabase
 - `make db-downgrade` - Rollback last migration
+- `make db-reset` - Reset Supabase database to fresh state (⚠️ deletes all data)
+- `make db-seed` - Seed database with test data
 - Direct: `uv run alembic revision --autogenerate -m "message"` or `uv run alembic upgrade head`
 
 ### Testing
@@ -106,18 +107,19 @@ Pydantic BaseSettings with required fields (no defaults for sensitive data). All
 **Environment Loading**: `.env` file loaded into `os.environ` via `load_dotenv()` at app startup - required for third-party libraries (LangChain, etc.) that read from environment variables.
 
 **Dynamic properties:**
-- `DATABASE_URL` - Async PostgreSQL connection (asyncpg driver)
-- `SYNC_DATABASE_URL` - Sync PostgreSQL connection (psycopg2 driver) for SQLAdmin
+- `DATABASE_URL` - Async Supabase connection (asyncpg driver with URL-encoded credentials)
+- `SYNC_DATABASE_URL` - Sync Supabase connection (psycopg2 driver) for SQLAdmin
 - `CELERY_BROKER_URL` - Redis broker for Celery (db 0)
 - `CELERY_RESULT_BACKEND` - Redis result backend (db 1)
 - `CELERY_TASKS_MODULE` - Computed from `CELERY_APP_NAME` (e.g., "app.tasks")
 
 ### Database Layer
 
-**Engines**: Dual engine setup
-- `engine` (async) - For FastAPI endpoints via `create_async_engine()` with asyncpg driver
+**Engines**: Dual engine setup for Supabase
+- `engine` (async) - For FastAPI endpoints via `create_async_engine()` with asyncpg driver and statement cache disabled for pgbouncer compatibility
 - `sync_engine` (sync) - For SQLAdmin interface via `create_engine()` with psycopg2 driver
 - Both use `settings.DATABASE_ECHO` for SQL logging
+- Credentials URL-encoded to handle special characters (@, :, etc.)
 
 **Sessions**: Async sessionmaker with `expire_on_commit=False`
 - Inject via `SessionDep` type alias from `app.core.dependencies`
@@ -152,9 +154,12 @@ Pydantic BaseSettings with required fields (no defaults for sensitive data). All
 - Add new model file → migrations automatically detect it
 - No manual import needed in env.py
 
-**Async support**: Uses `async_engine_from_config` and `run_sync()`
+**Async support**: Uses `create_async_engine()` directly with Supabase-compatible settings
 
-**URL override**: `settings.DATABASE_URL` replaces alembic.ini URL at runtime
+**Supabase compatibility**:
+- Loads `.env` via `load_dotenv()` for environment variables
+- Disables prepared statement cache for pgbouncer compatibility
+- Uses `settings.DATABASE_URL` with URL-encoded credentials
 
 ### Celery Task Queue
 
@@ -226,9 +231,10 @@ Pydantic BaseSettings with required fields (no defaults for sensitive data). All
 - `testpaths = ["tests"]`
 - Custom marker: `@pytest.mark.integration` for tests requiring Celery worker
 
-**Test database**: Separate `{POSTGRES_DB}_test` database
+**Test database**: Separate `{POSTGRES_DB}_test` database on Supabase
 - Tables: Created once per session, dropped at end
 - Isolation: Each test in transaction that rolls back
+- Uses same Supabase connection as development
 
 **Key fixtures** (all function-scoped except `test_engine`):
 - `test_engine` (session) - Database engine
@@ -456,9 +462,10 @@ Required variables in `.env` (see `.env.example` for complete list)
 ## Key Implementation Details
 
 - **Package manager**: `uv` (not pip/poetry) - use `uv run` prefix for all Python commands
-- **Database**: Dual engines - async (asyncpg) for API, sync (psycopg2) for admin
+- **Database**: Supabase (PostgreSQL) - dual engines async (asyncpg) for API, sync (psycopg2) for admin
+- **Supabase setup**: Uses Session Pooler for pgbouncer compatibility with statement cache disabled
 - **API responses**: Scalar docs preferred over default Swagger UI
 - **Admin interface**: SQLAdmin at `/admin` with auto-discovery of ModelView classes
-- **Environment**: Required `.env` file (no defaults for secrets/connection strings)
-- **Docker networking**: Infrastructure services use service names as hostnames (e.g., `POSTGRES_HOST=postgres` in docker-compose, `localhost` for local dev)
-- **Celery worker**: Runs in Docker container, requires infrastructure to be up for task execution
+- **Environment**: Required `.env` file with Supabase credentials (see `.env.example`)
+- **Docker**: Only for Redis, Celery, and Flower - database is on Supabase cloud
+- **Celery worker**: Runs in Docker container, requires Redis to be up for task execution
