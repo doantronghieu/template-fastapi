@@ -9,7 +9,7 @@ help:
 	@echo "  make setup           - Create venv and install dependencies"
 	@echo "  make dev             - Start development server (http://127.0.0.1:8000)"
 	@echo ""
-	@echo "  make infra-up        - Start infrastructure (Redis, Celery, Flower)"
+	@echo "  make infra-up        - Start infrastructure (Celery, Flower)"
 	@echo "  make infra-down      - Stop infrastructure"
 	@echo "  make infra-reset     - Destroy and recreate infrastructure"
 	@echo "  make infra-logs      - View infrastructure logs"
@@ -45,26 +45,28 @@ dev:
 # ============================================================================
 # Infrastructure (Docker Compose)
 # ============================================================================
-# Services: Redis 7, Celery worker, Flower monitoring
+# Services: Celery worker, Flower monitoring
 # Database: Using Supabase (configured in .env)
-# All services run in Docker with health checks and persistent volumes
+# Redis: Using Redis Cloud (configured in .env)
+# All services run in Docker with health checks
 
 # Start all infrastructure services in detached mode (excluding app)
-# Services: redis, celery-worker, flower
+# Services: celery-worker, flower
 # Flower UI: http://127.0.0.1:5555
 infra-up:
-	docker compose up -d redis celery-worker flower
+	docker compose up -d celery-worker flower
 
-# Stop and remove all containers (data persists in volumes)
+# Stop and remove all containers
 infra-down:
 	docker compose down
 
-# Destroy volumes and recreate all infrastructure (Redis, Celery, Flower)
+# Destroy and recreate all infrastructure (Celery, Flower)
 # Note: Database is on Supabase - use 'make db-reset' to reset database
+# Note: Redis is on Redis Cloud - data persists externally
 infra-reset:
 	@echo "Destroying infrastructure and recreating..."
 	docker compose down -v
-	docker compose up -d redis celery-worker flower
+	docker compose up -d celery-worker flower
 	@echo "Waiting for services to be ready..."
 	@sleep 3
 	@echo "Infrastructure reset complete!"

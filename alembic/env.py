@@ -6,13 +6,12 @@ from alembic import context
 from dotenv import load_dotenv
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlmodel import SQLModel
 
 # Load .env file into os.environ before importing settings
 load_dotenv()
 
-from app.core.config import settings
+from app.core.config import settings  # noqa: E402
 
 # Auto-import all models from app/models/ for Alembic autogenerate
 models_path = Path(__file__).parent.parent / "app" / "models"

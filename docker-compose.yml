@@ -1,40 +1,14 @@
 services:
-  # PostgreSQL - Disabled (using Supabase instead)
-  # Uncomment if you want to use local PostgreSQL
-  # postgres:
-  #   image: postgres:17-alpine
-  #   container_name: postgres
-  #   environment:
-  #     POSTGRES_USER: ${POSTGRES_USER:-postgres}
-  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-  #     POSTGRES_DB: ${POSTGRES_DB:-db}
-  #   ports:
-  #     - "${POSTGRES_PORT:-5432}:5432"
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
-  #     interval: 5s
-  #     timeout: 5s
-  #     retries: 5
-
   # FastAPI App (optional - for containerized deployment)
-  # For development, use: make dev (runs locally with Supabase connection)
+  # For development, use: make dev (runs locally with Supabase and Redis Cloud)
   app:
     build:
       context: .
       dockerfile: docker/Dockerfile
     container_name: fastapi-app
     env_file: .env
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      # Database credentials from .env (Supabase)
     ports:
       - "${PORT:-8000}:${PORT:-8000}"
-    depends_on:
-      redis:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${PORT:-8000}/api/health"]
       interval: 10s
@@ -42,33 +16,13 @@ services:
       retries: 3
       start_period: 10s
 
-  redis:
-    image: redis:7-alpine
-    container_name: redis
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   celery-worker:
     build:
       context: .
       dockerfile: docker/Dockerfile.celery
     container_name: celery-worker
-    command: uv run celery -A app.core.celery:celery_app worker --loglevel=info
+    command: uv run celery -A app.core.celery:celery_app worker --loglevel=info --concurrency=2
     env_file: .env
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      # Database credentials from .env (Supabase)
-    depends_on:
-      redis:
-        condition: service_healthy
 
   flower:
     build:
@@ -77,15 +31,7 @@ services:
     container_name: flower
     command: uv run celery -A app.core.celery:celery_app flower --port=${FLOWER_PORT:-5555}
     env_file: .env
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
     ports:
       - "${FLOWER_PORT:-5555}:${FLOWER_PORT:-5555}"
-    depends_on:
-      redis:
-        condition: service_healthy
 
-volumes:
-  # postgres_data:  # Disabled - using Supabase
-  redis_data:
+# No volumes needed - using Supabase for database and Redis Cloud for caching
