@@ -19,6 +19,9 @@ class ChannelType(str, Enum):
     TELEGRAM = "telegram"
     WHATSAPP = "whatsapp"
     MESSENGER = "messenger"
+    ZALO = "zalo"
+    INSTAGRAM = "instagram"
+    TIKTOK = "tiktok"
     DIRECT = "direct"
 
 
@@ -55,7 +58,7 @@ class UserChannel(SQLModel, table=True):
     )
     channel_type: ChannelType = Field(
         sa_column=Column(String(50), nullable=False),
-        description="Channel platform type (telegram, whatsapp, messenger, direct)",
+        description="Channel platform type (telegram, whatsapp, messenger, zalo, instagram, tiktok, direct)",
     )
     is_primary: bool = Field(
         default=False, description="Whether this is the user's primary channel"
