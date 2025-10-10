@@ -24,7 +24,7 @@ help:
 	@echo "  make lint            - Run linter"
 	@echo "  make format          - Format code"
 	@echo ""
-	@echo "  make client-generate - Generate TypeScript client from OpenAPI schema"
+	@echo "  make client-generate [OUTPUT=path] - Generate TypeScript client (default: ./client)"
 	@echo ""
 	@echo "  make clean           - Remove cache and venv"
 
@@ -132,13 +132,16 @@ test:
 # ============================================================================
 
 # Generate TypeScript client using Hey API from OpenAPI schema
-# Output: ./client directory with TypeScript SDK
+# Usage: make client-generate [OUTPUT=path]
+# Default output: ./client directory with TypeScript SDK
+OUTPUT ?= ./client
+
 client-generate:
 	@echo "Exporting OpenAPI schema..."
 	@PYTHONPATH=. uv run python scripts/export_openapi.py
-	@echo "Generating TypeScript client..."
-	@npx @hey-api/openapi-ts -i openapi.json -o client
-	@echo "✓ TypeScript client generated in ./client"
+	@echo "Generating TypeScript client to $(OUTPUT)..."
+	@npx @hey-api/openapi-ts -i openapi.json -o $(OUTPUT)
+	@echo "✓ TypeScript client generated in $(OUTPUT)"
 
 # ============================================================================
 # Cleanup
