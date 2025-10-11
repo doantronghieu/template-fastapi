@@ -1,8 +1,8 @@
 from datetime import datetime
 
 from markupsafe import Markup
-from sqlalchemy.orm import InstrumentedAttribute, selectinload
 from sqladmin import ModelView
+from sqlalchemy.orm import InstrumentedAttribute, selectinload
 from starlette.requests import Request
 
 from app.models import Conversation, Message, User

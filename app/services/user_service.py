@@ -29,9 +29,7 @@ class UserService:
             User with channels loaded, or None if not found
         """
         result = await self.session.execute(
-            select(User)
-            .options(selectinload(User.channels))
-            .where(User.id == user_id)
+            select(User).options(selectinload(User.channels)).where(User.id == user_id)
         )
         return result.scalar_one_or_none()
 

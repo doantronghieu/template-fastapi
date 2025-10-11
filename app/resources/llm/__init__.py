@@ -6,8 +6,8 @@ Provides:
 - load_schema(): Load core app schemas
 """
 
-from pathlib import Path
 import json
+from pathlib import Path
 
 
 def create_loader(base_dir: Path):

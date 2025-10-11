@@ -4,6 +4,7 @@ Extensions should copy this pattern to load their own prompts/schemas.
 """
 
 from pathlib import Path
+
 from app.resources.llm import create_loader
 
 # Extension-specific loaders

@@ -33,7 +33,7 @@ celery_app.conf.update(
     # Result backend connection pooling
     result_backend_transport_options={
         "max_connections": 5,
-        "socket_keepalive": True, # enabled for connection reuse
+        "socket_keepalive": True,  # enabled for connection reuse
         "socket_keepalive_options": {1: 1, 2: 1, 3: 3},
     },
     # Broker transport connection pooling
