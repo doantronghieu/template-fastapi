@@ -6,12 +6,16 @@ from .messaging_service import (
     MessagingServiceDep,
     get_messaging_service,
 )
+from .user_service import UserService, UserServiceDep, get_user_service
 
 __all__ = [
     "ExampleService",
     "ExampleServiceDep",
     "MessagingService",
     "MessagingServiceDep",
+    "UserService",
+    "UserServiceDep",
     "get_example_service",
     "get_messaging_service",
+    "get_user_service",
 ]

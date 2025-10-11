@@ -8,6 +8,7 @@ from sqlmodel import SQLModel
 
 from app.models import ChannelType
 from app.models.messaging import ConversationBase, MessageBase
+from app.schemas.user import UserResponseBase
 
 
 class ChannelModeBase(SQLModel):
@@ -89,6 +90,15 @@ class MessageResponse(MessageBase):
     conversation_id: UUID
 
 
+class MessagePreviewResponse(MessageBase):
+    """Message preview for conversation lists.
+
+    Inherits from MessageBase (sender_role, content) and adds timestamp.
+    """
+
+    created_at: datetime
+
+
 class MessageHistoryItem(BaseModel):
     """Single message in conversation history.
 
@@ -106,6 +116,7 @@ class ConversationHistoryResponse(BaseModel):
 
     conversation_id: UUID
     conversation_history: list[MessageHistoryItem]
+    next_cursor: UUID | None = None
 
 
 class ConversationListItem(ConversationBase):
@@ -114,13 +125,18 @@ class ConversationListItem(ConversationBase):
     id: UUID
     created_at: datetime
     updated_at: datetime
-    message_count: int
+    ai_summary_updated_at: datetime | None
+    user: UserResponseBase
+    channel_type: str | None
+    last_message: MessagePreviewResponse | None
 
 
 class ConversationListResponse(BaseModel):
     """Response schema for conversation list."""
 
     conversations: list[ConversationListItem]
+    next_cursor: UUID | None = None
+    has_more: bool
 
 
 class ConversationMessagesQuery(BaseModel):
@@ -131,14 +147,17 @@ class ConversationMessagesQuery(BaseModel):
         None, description="External conversation identifier"
     )
     limit: int = Field(
-        20, ge=1, le=100, description="Maximum number of messages to return"
+        50, ge=1, le=100, description="Maximum number of messages to return"
+    )
+    before_message_id: UUID | None = Field(
+        None, description="Message UUID to fetch messages before (for pagination)"
     )
     order: str = Field(
         "created_at.desc",
         description="Sort order: 'field.direction' (e.g., 'created_at.desc')",
     )
     reverse: bool = Field(
-        False, description="Reverse the final result order after sorting"
+        True, description="Reverse the final result order after sorting"
     )
 
     @model_validator(mode="after")

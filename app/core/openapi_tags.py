@@ -23,6 +23,7 @@ class APITag(str, Enum):
     EXAMPLES = "Examples"
     MESSAGING = "Messaging"
     TASKS = "Tasks"
+    USERS = "Users"
 
     # Lib tags
     LLM = "LLM"
@@ -46,6 +47,10 @@ TAG_METADATA: dict[APITag, dict] = {
     },
     APITag.TASKS: {
         "description": "Celery background task management",
+        "group": TagGroup.CORE,
+    },
+    APITag.USERS: {
+        "description": "User management and details",
         "group": TagGroup.CORE,
     },
     # Lib

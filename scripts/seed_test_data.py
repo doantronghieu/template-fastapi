@@ -1,6 +1,7 @@
 """Seed database with test data for messaging system."""
 
 import asyncio
+from datetime import datetime, timedelta
 from functools import partial
 from uuid import UUID
 
@@ -38,31 +39,101 @@ USERS = [
         "email": "admin@example.com",
         "name": "Admin User",
         "role": UserRole.ADMIN,
-        "profile": {"department": "Support"},
+        "profile": {"department": "Support", "phone": "+1-555-0100"},
     },
     {
         "id": uid(2),
         "email": "alice@example.com",
         "name": "Alice Smith",
         "role": UserRole.CLIENT,
-        "profile": {"company": "Acme Corp"},
+        "profile": {
+            "company": "Acme Corp",
+            "department": "Sales",
+            "phone": "+1-555-0123",
+            "timezone": "America/New_York",
+        },
     },
     {
         "id": uid(3),
         "email": "bob@example.com",
         "name": "Bob Johnson",
         "role": UserRole.CLIENT,
-        "profile": {"company": "TechStart Inc"},
+        "profile": {
+            "company": "TechStart Inc",
+            "role_title": "Engineering Manager",
+            "timezone": "America/Los_Angeles",
+            "preferences": {"notifications": "email_only", "theme": "dark"},
+        },
     },
     # AI Bot user
-    {"id": uid(10), "name": "AI Assistant Bot", "role": UserRole.AI},
-    # Channel users - one for each platform
-    {"id": uid(4), "name": "Telegram User 5678", "role": UserRole.CLIENT},
-    {"id": uid(5), "name": "WhatsApp User 1234", "role": UserRole.CLIENT},
-    {"id": uid(6), "name": "Messenger User 9012", "role": UserRole.CLIENT},
-    {"id": uid(7), "name": "Zalo User 3456", "role": UserRole.CLIENT},
-    {"id": uid(8), "name": "Instagram User 7890", "role": UserRole.CLIENT},
-    {"id": uid(9), "name": "TikTok User 2468", "role": UserRole.CLIENT},
+    {"id": uid(10), "name": "AI Assistant Bot", "role": UserRole.AI, "profile": {}},
+    # Channel users - one for each platform with varied profiles
+    {
+        "id": uid(4),
+        "name": "Telegram User 5678",
+        "role": UserRole.CLIENT,
+        "profile": {
+            "language": "en",
+            "country": "US",
+            "preferences": {"notifications": "all"},
+        },
+    },
+    {
+        "id": uid(5),
+        "name": "WhatsApp User 1234",
+        "role": UserRole.CLIENT,
+        "profile": {
+            "language": "en",
+            "country": "GB",
+            "phone": "+44-20-1234-5678",
+            "tags": ["premium", "vip"],
+        },
+    },
+    {
+        "id": uid(6),
+        "name": "Messenger User 9012",
+        "role": UserRole.CLIENT,
+        "profile": {
+            "language": "en",
+            "country": "US",
+            "source": "facebook_ad_campaign_2024",
+            "interests": ["fashion", "tech"],
+        },
+    },
+    {
+        "id": uid(7),
+        "name": "Zalo User 3456",
+        "role": UserRole.CLIENT,
+        "profile": {
+            "language": "vi",
+            "country": "VN",
+            "notes": "VIP customer - high value",
+            "lifetime_value": 5000,
+        },
+    },
+    {
+        "id": uid(8),
+        "name": "Instagram User 7890",
+        "role": UserRole.CLIENT,
+        "profile": {
+            "language": "en",
+            "country": "US",
+            "source": "instagram_influencer_2024",
+            "interests": ["beauty", "lifestyle"],
+            "metadata": {"follower_count": 15000, "verified": True},
+        },
+    },
+    {
+        "id": uid(9),
+        "name": "TikTok User 2468",
+        "role": UserRole.CLIENT,
+        "profile": {
+            "language": "en",
+            "country": "CA",
+            "age_range": "18-24",
+            "interests": ["gaming", "tech"],
+        },
+    },
 ]
 
 # Channel associations
@@ -112,54 +183,80 @@ CHANNELS = [
     },
 ]
 
-# Conversations
+# Conversations with AI summaries
 CONVERSATIONS = [
     # Alice's conversations - demonstrates user with BOTH direct AND channel conversations
-    {"id": cid(1), "user_id": uid(2), "title": "Alice Direct Support Chat"},
+    {
+        "id": cid(1),
+        "user_id": uid(2),
+        "title": "Alice Direct Support Chat",
+        "ai_summary": "Customer requesting assistance with account settings, specifically asking how to update email address. Admin providing step-by-step guidance for account management tasks.",
+        "ai_summary_updated_at": datetime.now() - timedelta(hours=2),
+    },
     {
         "id": cid(9),
         "user_id": uid(2),
         "title": "Alice via Telegram",
         "channel_conversation_id": "tg_alice_001",
+        "ai_summary": "Order status inquiry via Telegram channel. Customer provided order number #12345. Admin confirmed shipment with tracking number TRK123456789. AI assistant initiated support, admin completed resolution.",
+        "ai_summary_updated_at": datetime.now() - timedelta(hours=1),
     },
     # Bob's direct conversation
-    {"id": cid(2), "user_id": uid(3), "title": "Bob Technical Issue"},
+    {
+        "id": cid(2),
+        "user_id": uid(3),
+        "title": "Bob Technical Issue",
+        "ai_summary": "Technical support case for file upload errors. Customer experiencing upload failures. Admin requested error message details for troubleshooting. Case currently pending customer response with error logs.",
+        "ai_summary_updated_at": datetime.now() - timedelta(minutes=30),
+    },
     # Channel-only user conversations
     {
         "id": cid(3),
         "user_id": uid(4),
         "title": "Chat via Telegram",
         "channel_conversation_id": "tg_chat_001",
+        "ai_summary": "Multi-turn customer service interaction about business hours and order tracking. AI handled initial queries about availability (24/7 service). Customer escalated to admin for order tracking assistance. Admin requested order number for lookup.",
+        "ai_summary_updated_at": datetime.now() - timedelta(hours=3),
     },
     {
         "id": cid(4),
         "user_id": uid(5),
         "title": "Chat via WhatsApp",
         "channel_conversation_id": "wa_chat_001",
+        "ai_summary": "Pricing inquiry conversation focused on bulk discount offerings. AI explained bulk pricing structure (100+ units threshold). Customer interested in detailed pricing tiers for volume purchases. Potential high-value sales opportunity.",
+        "ai_summary_updated_at": datetime.now() - timedelta(hours=4),
     },
     {
         "id": cid(5),
         "user_id": uid(6),
         "title": "Chat via Messenger",
         "channel_conversation_id": "msg_chat_001",
+        "ai_summary": "New product launch inquiry from Facebook ad campaign source. Customer showing interest in pre-ordering upcoming product. AI provided launch timeline (next week). Admin clarified delivery timeframe (3-5 business days domestic). High engagement from ad campaign.",
+        "ai_summary_updated_at": datetime.now() - timedelta(hours=2, minutes=15),
     },
     {
         "id": cid(6),
         "user_id": uid(7),
         "title": "Chat via Zalo",
         "channel_conversation_id": "zalo_chat_001",
+        "ai_summary": "Vietnamese language product information request. VIP customer (lifetime value $5000) inquiring about latest products. AI handled initial Vietnamese greeting. Admin provided detailed product specifications in English. Requires follow-up with Vietnamese product catalog.",
+        "ai_summary_updated_at": datetime.now() - timedelta(hours=5),
     },
     {
         "id": cid(7),
         "user_id": uid(8),
         "title": "Chat via Instagram",
         "channel_conversation_id": "ig_chat_001",
+        "ai_summary": "Instagram influencer engagement (15K followers, verified). Customer interested in featured post item. AI confirmed stock availability. Customer asking about color options. Admin confirmed all colors in stock (black, white, blue, pink). Potential influencer collaboration opportunity.",
+        "ai_summary_updated_at": datetime.now() - timedelta(hours=1, minutes=45),
     },
     {
         "id": cid(8),
         "user_id": uid(9),
         "title": "Chat via TikTok",
         "channel_conversation_id": "tt_chat_001",
+        "ai_summary": "TikTok video-driven product inquiry from 18-24 age demographic. Customer impressed by product demo video. AI provided pricing ($49.99 with free shipping). Customer asked about international shipping. Admin confirmed worldwide shipping with variable costs by location. Young demographic high engagement.",
+        "ai_summary_updated_at": datetime.now() - timedelta(minutes=50),
     },
 ]
 

@@ -1,13 +1,17 @@
 """Messaging service for conversation and message operations."""
 
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID
+
+if TYPE_CHECKING:
+    from sqlmodel import SQLModel
 
 from fastapi import Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import SessionDep
 from app.models import (
@@ -19,6 +23,7 @@ from app.models import (
     UserChannel,
     UserRole,
 )
+from app.utils import serialize_enum
 
 
 class MessagingService:
@@ -26,6 +31,55 @@ class MessagingService:
 
     def __init__(self, session: AsyncSession):
         self.session = session
+
+    def _paginate_results(
+        self, items: list, limit: int
+    ) -> tuple[list, UUID | None, bool]:
+        """
+        Apply pagination logic to results list.
+
+        Args:
+            items: List of items (must have .id attribute for cursor)
+            limit: Maximum number of items per page
+
+        Returns:
+            Tuple of (paginated_items, next_cursor, has_more)
+        """
+        has_more = len(items) > limit
+        if has_more:
+            items = items[:limit]
+        next_cursor = items[-1].id if items and has_more else None
+        return items, next_cursor, has_more
+
+    def _parse_order(self, order: str, model: type["SQLModel"]) -> tuple[Any, str]:
+        """
+        Parse order string and return column with direction.
+
+        Args:
+            order: Order string in format "field.direction" (e.g., "created_at.desc")
+            model: SQLModel class to get column from
+
+        Returns:
+            Tuple of (column, direction)
+
+        Raises:
+            HTTPException: 400 if invalid format or field
+        """
+        try:
+            field, direction = order.split(".")
+            if direction not in ["asc", "desc"]:
+                raise ValueError("Direction must be 'asc' or 'desc'")
+        except ValueError:
+            raise HTTPException(
+                400,
+                "Invalid order format. Use 'field.direction' (e.g., 'created_at.desc')",
+            )
+
+        order_column = getattr(model, field, None)
+        if order_column is None:
+            raise HTTPException(400, f"Invalid order field: {field}")
+
+        return order_column, direction
 
     async def _find_conversation(
         self,
@@ -42,21 +96,20 @@ class MessagingService:
         Returns:
             Conversation if found, None otherwise
         """
+        if not conversation_id and not channel_conversation_id:
+            return None
+
+        # Build query with OR conditions
+        conditions = []
         if conversation_id:
-            result = await self.session.execute(
-                select(Conversation).where(Conversation.id == conversation_id)
-            )
-            return result.scalar_one_or_none()
-
+            conditions.append(Conversation.id == conversation_id)
         if channel_conversation_id:
-            result = await self.session.execute(
-                select(Conversation).where(
-                    Conversation.channel_conversation_id == channel_conversation_id
-                )
+            conditions.append(
+                Conversation.channel_conversation_id == channel_conversation_id
             )
-            return result.scalar_one_or_none()
 
-        return None
+        result = await self.session.execute(select(Conversation).where(*conditions))
+        return result.scalar_one_or_none()
 
     async def _find_user_channel(
         self, channel_id: str, channel_type: ChannelType
@@ -318,6 +371,10 @@ class MessagingService:
             content=content,
         )
         self.session.add(message)
+
+        conversation.updated_at = datetime.now(UTC)
+        self.session.add(conversation)
+
         await self.session.commit()
         await self.session.refresh(message)
 
@@ -327,22 +384,24 @@ class MessagingService:
         self,
         conversation_id: UUID | None = None,
         channel_conversation_id: str | None = None,
-        limit: int = 20,
+        limit: int = 50,
+        before_message_id: UUID | None = None,
         order: str = "created_at.desc",
-        reverse: bool = False,
-    ) -> tuple[Conversation, list[Message]]:
+        reverse: bool = True,
+    ) -> tuple[Conversation, list[Message], UUID | None]:
         """
-        Get messages for a conversation with sorting options.
+        Get messages for a conversation with pagination support.
 
         Args:
             conversation_id: Internal conversation UUID
             channel_conversation_id: External conversation identifier
             limit: Maximum number of messages to return
+            before_message_id: Message UUID to fetch messages before (for pagination)
             order: Sort order in format "field.direction" (e.g., "created_at.desc")
             reverse: Whether to reverse the final result order
 
         Returns:
-            Tuple of (conversation, messages_list)
+            Tuple of (conversation, messages_list, next_cursor)
 
         Raises:
             HTTPException: 404 if conversation not found, 400 if invalid order format
@@ -355,27 +414,25 @@ class MessagingService:
         if not conversation:
             raise HTTPException(404, "Conversation not found")
 
-        # Parse order parameter
-        try:
-            field, direction = order.split(".")
-            if direction not in ["asc", "desc"]:
-                raise ValueError("Direction must be 'asc' or 'desc'")
-        except ValueError:
-            raise HTTPException(
-                400,
-                "Invalid order format. Use 'field.direction' (e.g., 'created_at.desc')",
-            )
+        # Parse order parameter using helper
+        order_column, direction = self._parse_order(order, Message)
 
         # Build query with ordering
-        order_column = getattr(Message, field, None)
-        if order_column is None:
-            raise HTTPException(400, f"Invalid order field: {field}")
-
         query = (
             select(Message)
             .where(Message.conversation_id == conversation.id)
-            .limit(limit)
+            .limit(limit + 1)  # Fetch one extra to check has_more
         )
+
+        # Add pagination filter
+        if before_message_id:
+            before_msg_result = await self.session.execute(
+                select(Message).where(Message.id == before_message_id)
+            )
+            before_msg = before_msg_result.scalar_one_or_none()
+            if before_msg:
+                # Assuming descending order by created_at for pagination
+                query = query.where(Message.created_at < before_msg.created_at)
 
         if direction == "desc":
             query = query.order_by(order_column.desc())
@@ -383,13 +440,107 @@ class MessagingService:
             query = query.order_by(order_column.asc())
 
         result = await self.session.execute(query)
-        messages = list(result.scalars().all())
+        messages: list[Message] = list(result.scalars().all())
+
+        # Apply pagination using helper
+        messages, next_cursor, _ = self._paginate_results(messages, limit)
 
         # Apply reverse if requested
         if reverse:
             messages.reverse()
 
-        return conversation, messages
+        return conversation, messages, next_cursor
+
+    async def get_all_conversations(
+        self,
+        limit: int = 50,
+        cursor: UUID | None = None,
+    ) -> tuple[list[dict], UUID | None, bool]:
+        """
+        Get all conversations across all users for admin view.
+
+        Args:
+            limit: Maximum number of conversations to return
+            cursor: Conversation UUID to start after (for pagination)
+
+        Returns:
+            Tuple of (conversations_list, next_cursor, has_more)
+        """
+        # Base query with eager loading for user and messages
+        query = (
+            select(Conversation)
+            .options(
+                selectinload(Conversation.user).selectinload(User.channels),
+                selectinload(Conversation.messages).load_only(
+                    Message.content,
+                    Message.created_at,
+                    Message.sender_role,
+                ),
+            )
+            .order_by(Conversation.updated_at.desc())
+            .limit(limit + 1)  # Fetch one extra to check has_more
+        )
+
+        # Apply cursor pagination
+        if cursor:
+            cursor_conv_result = await self.session.execute(
+                select(Conversation).where(Conversation.id == cursor)
+            )
+            cursor_conv = cursor_conv_result.scalar_one_or_none()
+            if cursor_conv:
+                query = query.where(Conversation.updated_at < cursor_conv.updated_at)
+
+        result = await self.session.execute(query)
+        conversations: list[Conversation] = list(result.scalars().all())
+
+        # Apply pagination using helper
+        conversations, next_cursor, has_more = self._paginate_results(
+            conversations, limit
+        )
+
+        # Format response with eagerly loaded data
+        formatted_conversations = []
+        for conv in conversations:
+            # Get last message from eagerly loaded messages
+            last_message = (
+                max(conv.messages, key=lambda m: m.created_at)
+                if conv.messages
+                else None
+            )
+
+            # Get primary channel from eagerly loaded user channels
+            user_channels = sorted(
+                conv.user.channels, key=lambda c: c.is_primary, reverse=True
+            )
+            user_channel = user_channels[0] if user_channels else None
+
+            formatted_conversations.append(
+                {
+                    "id": conv.id,
+                    "title": conv.title,
+                    "created_at": conv.created_at,
+                    "updated_at": conv.updated_at,
+                    "ai_summary": conv.ai_summary,
+                    "ai_summary_updated_at": conv.ai_summary_updated_at,
+                    "user": {
+                        "id": conv.user.id,
+                        "name": conv.user.name,
+                        "role": conv.user.role,
+                    },
+                    "channel_type": user_channel.channel_type if user_channel else None,
+                    "last_message": (
+                        {
+                            "content": last_message.content,
+                            "created_at": last_message.created_at,
+                            "sender_role": serialize_enum(last_message.sender_role),
+                        }
+                        if last_message
+                        else None
+                    ),
+                }
+            )
+
+        return formatted_conversations, next_cursor, has_more
 
     async def get_user_conversations(
         self,

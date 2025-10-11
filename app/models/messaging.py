@@ -33,6 +33,11 @@ class ConversationBase(SQLModel):
         max_length=255,
         description="External channel conversation ID (Telegram chat ID, WhatsApp thread, etc.)",
     )
+    ai_summary: str | None = Field(
+        default=None,
+        max_length=10000,
+        description="AI-generated summary of the conversation for admin quick reference",
+    )
 
 
 class Conversation(ConversationBase, table=True):
@@ -43,6 +48,9 @@ class Conversation(ConversationBase, table=True):
     id: UUID = uuid_pk()
     created_at: datetime = timestamp_field()
     updated_at: datetime = timestamp_field()
+    ai_summary_updated_at: datetime | None = Field(
+        default=None, description="Timestamp when AI summary was last generated"
+    )
 
     user_id: UUID = uuid_fk("users")
     channel_conversation_id: str | None = Field(
