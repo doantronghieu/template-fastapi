@@ -1,13 +1,14 @@
 # FastAPI Template - Development Operations
 # Quick Start: make setup → cp .env.example .env → make infra-up → make db-migrate message="init" → make db-upgrade → make dev
 
-.PHONY: help setup dev test lint format clean db-migrate db-upgrade db-downgrade db-reset db-seed infra-up infra-down infra-reset infra-logs client-generate
+.PHONY: help setup dev ngrok test lint format clean db-migrate db-upgrade db-downgrade db-reset db-seed infra-up infra-down infra-reset infra-logs client-generate
 
 help:
 	@echo "FastAPI Template - Available Commands"
 	@echo ""
 	@echo "  make setup           - Create venv and install dependencies"
 	@echo "  make dev             - Start development server (http://127.0.0.1:8000)"
+	@echo "  make ngrok           - Start ngrok tunnel (reads PORT from .env)"
 	@echo ""
 	@echo "  make infra-up        - Start infrastructure (Celery, Flower)"
 	@echo "  make infra-down      - Stop infrastructure"
@@ -41,6 +42,16 @@ setup:
 # Server: http://127.0.0.1:8000 | API docs: http://127.0.0.1:8000/docs
 dev:
 	uv run python -m app.main
+
+# Start ngrok tunnel to expose local server (reads PORT from .env)
+ngrok:
+	@PORT=$$(grep '^PORT=' .env | cut -d '=' -f2); \
+	if [ -z "$$PORT" ]; then \
+		echo "Error: PORT not found in .env file"; \
+		exit 1; \
+	fi; \
+	echo "Starting ngrok tunnel on port $$PORT..."; \
+	ngrok http $$PORT
 
 # ============================================================================
 # Infrastructure (Docker Compose)
