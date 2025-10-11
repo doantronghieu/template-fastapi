@@ -64,8 +64,9 @@ ngrok:
 # Start all infrastructure services in detached mode (excluding app)
 # Services: celery-worker, flower
 # Flower UI: http://127.0.0.1:5555
+# Note: Always rebuilds images before starting
 infra-up:
-	docker compose up -d celery-worker flower
+	docker compose up -d --build celery-worker flower
 
 # Stop and remove all containers
 infra-down:
@@ -74,10 +75,11 @@ infra-down:
 # Destroy and recreate all infrastructure (Celery, Flower)
 # Note: Database is on Supabase - use 'make db-reset' to reset database
 # Note: Redis is on Redis Cloud - data persists externally
+# Note: Always rebuilds images before starting
 infra-reset:
 	@echo "Destroying infrastructure and recreating..."
 	docker compose down -v
-	docker compose up -d celery-worker flower
+	docker compose up -d --build celery-worker flower
 	@echo "Waiting for services to be ready..."
 	@sleep 3
 	@echo "Infrastructure reset complete!"
