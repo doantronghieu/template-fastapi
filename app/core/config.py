@@ -60,6 +60,23 @@ class Settings(BaseSettings):
         description="LLM provider (e.g., 'langchain', 'litellm')",
     )
 
+    # Facebook Messenger
+    FACEBOOK_PAGE_ACCESS_TOKEN: str = Field(
+        ..., description="Facebook Page Access Token for sending messages"
+    )
+    FACEBOOK_VERIFY_TOKEN: str = Field(
+        ..., description="Custom token for webhook verification"
+    )
+    FACEBOOK_APP_SECRET: str = Field(
+        ..., description="Facebook App Secret for signature verification"
+    )
+    FACEBOOK_GRAPH_API_VERSION: str = Field(
+        default="v24.0", description="Facebook Graph API version (default: v24.0)"
+    )
+    FACEBOOK_RATE_LIMIT_MESSAGES_PER_MINUTE: int = Field(
+        default=10, description="Max messages per minute per user"
+    )
+
     # Extensions
     ENABLED_EXTENSIONS: str | list[str] = Field(
         default="",

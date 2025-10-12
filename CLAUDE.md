@@ -97,7 +97,7 @@ make dev                                      # Start FastAPI server at http://1
 - `alembic/` - Database migrations with async support
 - `docker/` - Docker configurations (Dockerfile.celery)
 - `scripts/` - Utility scripts (export_openapi.py)
-- `docs/` - Documentation (EXTENSIONS.md)
+- `docs/` - Documentation (EXTENSIONS.md, MESSENGER_INTEGRATION.md)
 - `app/extensions/` - Extension modules (optional, loaded via config)
 
 ### Configuration System
@@ -460,9 +460,22 @@ Avoid deep nesting (`app/lib/ai/llm/`) - use flat structure with clear capabilit
 
 **Testing pattern**: Mirror `app/lib/` structure in `app/api/lib/` with 1:1 endpoint mapping, share schemas via `app/api/lib/schemas/`
 
+## Logging and Error Handling
+
+**Logging Strategy:**
+- Success operations: Log minimal essential information using f-string formatting
+- Error conditions: Always include full stack traces using `exc_info=True` parameter for root cause analysis
+- Embed contextual data directly in message strings rather than using logger's `extra` parameter (not visible in default formatters)
+
+**Error Handling:**
+- Re-raise exceptions after final retry attempt to expose full error context to calling code
+- Avoid masking errors with user-friendly fallback messages that hide root causes during debugging
+- Apply fail-open pattern for non-critical services to maintain availability when dependencies fail
+
 ## Environment Configuration
 
 Required variables in `.env` (see `.env.example` for complete list)
+
 ## Key Implementation Details
 
 - **Package manager**: `uv` (not pip/poetry) - use `uv run` prefix for all Python commands

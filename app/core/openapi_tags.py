@@ -12,6 +12,7 @@ class TagGroup(str, Enum):
 
     CORE = "Core"
     LIB = "Lib"
+    INTEGRATION = "Integration"
     EXTENSIONS = "Extensions"
 
 
@@ -24,10 +25,14 @@ class APITag(str, Enum):
     MESSAGING = "Messaging"
     TASKS = "Tasks"
     USERS = "Users"
+    WEBHOOKS = "Webhooks"
 
     # Lib tags
     LLM = "LLM"
     LANGCHAIN = "LangChain"
+
+    # Integration tags
+    MESSENGER = "Messenger"
 
 
 # Tag metadata: description and group assignment
@@ -52,6 +57,15 @@ TAG_METADATA: dict[APITag, dict] = {
     APITag.USERS: {
         "description": "User management and details",
         "group": TagGroup.CORE,
+    },
+    APITag.WEBHOOKS: {
+        "description": "Webhook endpoints for external integrations",
+        "group": TagGroup.CORE,
+    },
+    # Integration
+    APITag.MESSENGER: {
+        "description": "Facebook Messenger API operations",
+        "group": TagGroup.INTEGRATION,
     },
     # Lib
     APITag.LLM: {
