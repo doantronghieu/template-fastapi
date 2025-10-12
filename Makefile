@@ -1,13 +1,15 @@
 # FastAPI Template - Development Operations
 # Quick Start: make setup → cp .env.example .env → make infra-up → make db-migrate message="init" → make db-upgrade → make dev
 
-.PHONY: help setup dev ngrok test lint format clean db-migrate db-upgrade db-downgrade db-reset db-seed infra-up infra-down infra-reset infra-logs client-generate
+.PHONY: help setup dev celery flower ngrok test lint format clean db-migrate db-upgrade db-downgrade db-reset db-seed infra-up infra-down infra-reset infra-logs client-generate
 
 help:
 	@echo "FastAPI Template - Available Commands"
 	@echo ""
 	@echo "  make setup           - Create venv and install dependencies"
 	@echo "  make dev             - Start development server (http://127.0.0.1:8000)"
+	@echo "  make celery          - Start Celery worker locally (without Docker)"
+	@echo "  make flower          - Start Flower monitoring UI locally (http://127.0.0.1:5555)"
 	@echo "  make ngrok           - Start ngrok tunnel (reads PORT from .env)"
 	@echo ""
 	@echo "  make infra-up        - Start infrastructure (Celery, Flower)"
@@ -42,6 +44,16 @@ setup:
 # Server: http://127.0.0.1:8000 | API docs: http://127.0.0.1:8000/docs
 dev:
 	uv run python -m app.main
+
+# Start Celery worker locally (without Docker)
+# Processes background tasks from Redis Cloud queue
+celery:
+	uv run celery -A app.core.celery:celery_app worker --loglevel=info --concurrency=2
+
+# Start Flower monitoring UI locally (without Docker)
+# Dashboard: http://127.0.0.1:5555
+flower:
+	uv run celery -A app.core.celery:celery_app flower --port=5555
 
 # Start ngrok tunnel to expose local server (reads PORT from .env)
 ngrok:
