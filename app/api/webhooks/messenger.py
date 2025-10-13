@@ -9,7 +9,11 @@ import logging
 from fastapi import APIRouter, Header, HTTPException, Query, Request
 
 from app.core.config import settings
-from app.integrations.messenger import MessengerClientDep, parse_webhook_payload
+from app.integrations.messenger import (
+    MessengerClientDep,
+    format_messenger_message,
+    parse_webhook_payload,
+)
 from app.services.rate_limiter import RateLimiterDep
 from app.tasks.channel_tasks import process_messenger_message
 
@@ -94,11 +98,11 @@ async def receive_webhook(
     if not events:
         return {"status": "ok"}
 
-    # Process each message event
+    # Process each event (message or postback)
     for event in events:
         sender_id = event["sender_id"]
-        message_text = event["message_text"]
         conversation_id = event["conversation_id"]
+        event_type = event["event_type"]
 
         # Rate limiting: Prevent spam/abuse (sliding window via Redis)
         within_limit = await rate_limiter.check_rate_limit(
@@ -114,10 +118,30 @@ async def receive_webhook(
             )
             continue
 
-        # Queue background task (returns immediately to meet <20s requirement)
-        task_result = process_messenger_message.delay(
-            sender_id, message_text, conversation_id
-        )
-        logger.info(f"Queued task: sender={sender_id} task_id={task_result.id}")
+        # Process based on event type
+        if event_type == "message":
+            message_text = event["message_text"]
+            # Queue background task for text message processing
+            task_result = process_messenger_message.delay(
+                sender_id, message_text, conversation_id
+            )
+            logger.info(
+                f"Queued message task: sender={sender_id} task_id={task_result.id}"
+            )
+
+        elif event_type == "postback":
+            # Format postback event for database storage
+            formatted_text = format_messenger_message(
+                message_type="postback",
+                title=event.get("title", ""),
+                payload=event.get("payload", ""),
+            )
+            # Queue background task with formatted postback text
+            task_result = process_messenger_message.delay(
+                sender_id, formatted_text, conversation_id
+            )
+            logger.info(
+                f"Queued postback task: sender={sender_id} payload={event.get('payload')} task_id={task_result.id}"
+            )
 
     return {"status": "ok", "events_processed": len(events)}

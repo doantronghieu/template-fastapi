@@ -168,7 +168,7 @@ Pydantic BaseSettings with required fields (no defaults for sensitive data). All
 - Tasks auto-discovered from `app/tasks/` via glob pattern in `__init__.py`
 
 **Redis Cloud Free Tier Limit**:
-- Max 30 concurrent connections - optimized configuration in `app/core/celery.py` keeps usage ~50%
+- Max 30 concurrent connections - optimized configuration in `app/core/celery.py` keeps usage ~33%
 
 **Task execution**:
 - Trigger: Call `task_function.delay(*args)` to get AsyncResult with `.id`
@@ -248,6 +248,28 @@ Pydantic BaseSettings with required fields (no defaults for sensitive data). All
 
 See `tests/README.md` for detailed testing guide.
 
+### Manual API Testing with REST Client
+
+Interactive API testing using REST Client extension (Huachao Mao) for VS Code - provides in-editor HTTP execution as version-controlled alternative to Postman/Insomnia.
+
+**Setup and Organization**:
+- Store request collections in `tests/*.http` (one file per module)
+- Use `*.local.http` pattern (gitignored) for personal test data with actual credentials
+- Define common variables at file top for environment switching: @VARIABLE
+- Commit shared files with placeholder values, developers override locally
+
+**Test Case Design**:
+- Group by feature with clear section headers, ordered simple to complex
+- Maintain structural uniqueness - test each distinct parameter combination or validation rule once
+- Consolidate similar examples by removing redundant real-world scenarios
+- Focus on API capability coverage over exhaustive use cases
+- Include dedicated validation section testing boundary cases and expected failures
+
+**Development Integration**:
+- Execute during feature development for immediate feedback (faster than automated tests)
+- Documents API usage through concrete examples for team reference
+- Supplements but does not replace automated test coverage
+
 ## Extension System
 
 Modular architecture for custom features without affecting core codebase.
@@ -323,6 +345,33 @@ Avoid deep nesting (`app/lib/ai/llm/`) - use flat structure with clear capabilit
 - Share schemas across related test endpoints to avoid duplication
 
 ## Schema and Model Patterns
+
+### Schema Location and Organization
+
+**Principle**: Schemas belong in `app/schemas/` from the start for reusability and separation of concerns.
+
+**Location Rules**:
+- **Request/Response schemas**: Always in `app/schemas/{module}.py` (e.g., `app/schemas/messenger.py`)
+- **Flat structure**: Use `app/schemas/messenger.py`, not nested `app/schemas/integration/messenger.py`
+- **API endpoints**: Import schemas, focus purely on HTTP handling
+
+**Reasoning**:
+- Schemas become immediately reusable across API modules, services, and background tasks
+- Clear separation: API layer handles requests/responses, schemas handle validation
+- Consistency with project pattern where `app/schemas/` is single source of truth
+- Avoids refactoring cost of extracting schemas later when reuse is needed
+
+**Pattern**: Define schemas in `app/schemas/` first, then import into API endpoints - never define schemas inline in API files.
+
+### TypedDict vs Pydantic Schemas
+
+**Principle**: Use TypedDict for external API type hints without validation, Pydantic for internal API validation.
+
+**TypedDict** (`types.py` in integration/library dirs): Runtime type hints for external API structures (webhooks, SDK responses) without validation overhead. Provides IDE autocomplete and type safety at zero cost.
+
+**Pydantic** (`app/schemas/`): Request/response validation for our FastAPI endpoints with field constraints and automatic OpenAPI documentation. External APIs validate their own payloads - we validate untrusted user input to our endpoints.
+
+**Pattern**: Clients use TypedDict for external API calls, endpoints use Pydantic for request validation.
 
 ### SQLModel Base Pattern ("Fat Models")
 
@@ -460,6 +509,29 @@ Avoid deep nesting (`app/lib/ai/llm/`) - use flat structure with clear capabilit
 
 **Testing pattern**: Mirror `app/lib/` structure in `app/api/lib/` with 1:1 endpoint mapping, share schemas via `app/api/lib/schemas/`
 
+### Adding External Integration
+
+**Directory structure** for third-party services (Messenger, Slack, Twilio):
+```
+app/integrations/{service}/
+├── types.py         # TypedDict for external API structures
+├── client.py        # Async HTTP client with retry logic
+├── dependencies.py  # DI providers
+├── webhook.py       # Webhook payload parsing (optional)
+└── utils.py         # Formatters and helpers
+```
+
+**Implementation steps**:
+1. TypedDict types for webhook/API structures in `types.py`
+2. Client class with async methods in `client.py`
+3. Pydantic schemas in `app/schemas/{service}.py` for endpoint validation
+4. API endpoints in `app/api/integrations/{service}.py` to trigger actions
+5. Webhook endpoints in `app/api/webhooks/{service}.py` to receive events
+6. Celery tasks in `app/tasks/{service}_tasks.py` for background processing
+7. Message formatters in `utils.py` for database storage
+
+**Principles**: TypedDict for external APIs (zero overhead), Pydantic for our endpoints (validation), Celery for async webhook processing (response time requirements), format rich data for database storage (LLM context).
+
 ## Logging and Error Handling
 
 **Logging Strategy:**
@@ -486,4 +558,4 @@ Required variables in `.env` (see `.env.example` for complete list)
 - **Admin interface**: SQLAdmin at `/admin` with auto-discovery of ModelView classes
 - **Environment**: Required `.env` file with Supabase and Redis Cloud credentials (see `.env.example`)
 - **Docker**: Only for Celery and Flower - database is on Supabase cloud, Redis on Redis Cloud
-- **Celery worker**: Runs in Docker with concurrency=2, aggressively optimized connection pooling
+- **Celery worker**: Runs in Docker with concurrency=1 and pool=solo, aggressively optimized connection pooling

@@ -110,3 +110,90 @@ class MessengerClient:
             response = await client.post(self.send_api_url, json=payload, params=params)
             response.raise_for_status()
             return response.json()
+
+    @async_retry(max_retries=3, exceptions=(httpx.HTTPError,))
+    async def send_quick_replies(
+        self, recipient_id: str, text: str, quick_replies: list[dict]
+    ) -> dict:
+        """
+        Send text message with quick reply buttons.
+
+        Quick replies are temporary buttons that appear above the composer.
+        They disappear after the user taps one.
+
+        Args:
+            recipient_id: User's Page-Scoped ID (PSID) from webhook
+            text: Message text to display above quick replies
+            quick_replies: List of quick reply button dicts (max 13)
+
+        Returns:
+            dict: Response with recipient_id and message_id
+
+        Raises:
+            httpx.HTTPError: If all retry attempts fail
+
+        Example:
+            quick_replies = [
+                {"content_type": "text", "title": "Red", "payload": "COLOR_RED"},
+                {"content_type": "text", "title": "Blue", "payload": "COLOR_BLUE"}
+            ]
+        """
+        payload = {
+            "recipient": {"id": recipient_id},
+            "message": {"text": text, "quick_replies": quick_replies},
+        }
+        params = {"access_token": self.page_access_token}
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(self.send_api_url, json=payload, params=params)
+            response.raise_for_status()
+            return response.json()
+
+    @async_retry(max_retries=3, exceptions=(httpx.HTTPError,))
+    async def send_generic_template(
+        self, recipient_id: str, elements: list[dict]
+    ) -> dict:
+        """
+        Send generic template with elements (single card or carousel).
+
+        Generic template displays rich cards with images, titles, subtitles, and buttons.
+        Multiple elements create a horizontally scrollable carousel.
+
+        Args:
+            recipient_id: User's Page-Scoped ID (PSID) from webhook
+            elements: List of element dicts (1-10 elements for carousel)
+
+        Returns:
+            dict: Response with recipient_id and message_id
+
+        Raises:
+            httpx.HTTPError: If all retry attempts fail
+
+        Example:
+            elements = [
+                {
+                    "title": "Product 1",
+                    "subtitle": "Description here",
+                    "image_url": "https://example.com/img.jpg",
+                    "buttons": [
+                        {"type": "web_url", "title": "View", "url": "https://example.com"},
+                        {"type": "postback", "title": "Buy", "payload": "BUY_1"}
+                    ]
+                }
+            ]
+        """
+        payload = {
+            "recipient": {"id": recipient_id},
+            "message": {
+                "attachment": {
+                    "type": "template",
+                    "payload": {"template_type": "generic", "elements": elements},
+                }
+            },
+        }
+        params = {"access_token": self.page_access_token}
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(self.send_api_url, json=payload, params=params)
+            response.raise_for_status()
+            return response.json()

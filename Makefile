@@ -53,7 +53,7 @@ dev:
 # Start Celery worker locally (without Docker)
 # Processes background tasks from Redis Cloud queue
 celery:
-	uv run celery -A app.core.celery:celery_app worker --loglevel=info --concurrency=2
+	uv run celery -A app.core.celery:celery_app worker --loglevel=info --concurrency=1 --pool=solo
 
 # Start Flower monitoring UI locally (without Docker)
 # Dashboard: http://127.0.0.1:${FLOWER_PORT:-5555}

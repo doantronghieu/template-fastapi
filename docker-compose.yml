@@ -21,7 +21,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile.celery
     container_name: celery-worker
-    command: uv run celery -A app.core.celery:celery_app worker --loglevel=info --concurrency=2
+    command: uv run celery -A app.core.celery:celery_app worker --loglevel=info --concurrency=1 --pool=solo
     env_file: .env
 
   flower:

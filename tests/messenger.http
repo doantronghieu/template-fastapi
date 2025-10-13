@@ -1,0 +1,579 @@
+###############################################################################
+# Facebook Messenger API Integration Tests
+#
+# Extension: REST Client (Huachao Mao)
+# https://marketplace.visualstudio.com/items?itemName=humao.rest-client
+#
+# Setup:
+# 1. Install REST Client extension in VS Code
+# 2. Update @recipientId with your test user's PSID (Page-Scoped ID)
+# 3. Ensure FastAPI server is running: make dev
+# 4. Click "Send Request" above any request to execute it
+#
+# Tips:
+# - Use Ctrl+Alt+R (Cmd+Alt+R on Mac) to send request
+# - Use Ctrl+Alt+C (Cmd+Alt+C on Mac) to cancel request
+# - Results appear in separate tab
+###############################################################################
+
+### Variables
+@baseUrl = http://localhost:8000
+@recipientId = 24808142348793977
+
+### Note: Get recipient_id from Messenger webhook logs when testing
+### Or use Facebook Graph API to get test user PSIDs
+
+
+###############################################################################
+# 1. TEXT MESSAGES
+###############################################################################
+
+### 1.1 Send Simple Text Message
+POST {{baseUrl}}/api/integrations/messenger/send
+Content-Type: application/json
+
+{
+  "recipient_id": "{{recipientId}}",
+  "text": "Hello! This is a simple text message."
+}
+
+### 1.2 Send Long Text Message
+POST {{baseUrl}}/api/integrations/messenger/send
+Content-Type: application/json
+
+{
+  "recipient_id": "{{recipientId}}",
+  "text": "This is a longer message to test text wrapping and display. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris."
+}
+
+
+###############################################################################
+# 2. QUICK REPLIES
+###############################################################################
+
+### 2.1 Quick Replies - Basic (3 options)
+POST {{baseUrl}}/api/integrations/messenger/send-quick-replies
+Content-Type: application/json
+
+{
+  "recipient_id": "{{recipientId}}",
+  "text": "What's your favorite color?",
+  "quick_replies": [
+    {
+      "content_type": "text",
+      "title": "Red",
+      "payload": "COLOR_RED"
+    },
+    {
+      "content_type": "text",
+      "title": "Blue",
+      "payload": "COLOR_BLUE"
+    },
+    {
+      "content_type": "text",
+      "title": "Green",
+      "payload": "COLOR_GREEN"
+    }
+  ]
+}
+
+### 2.2 Quick Replies - With Icons
+POST {{baseUrl}}/api/integrations/messenger/send-quick-replies
+Content-Type: application/json
+
+{
+  "recipient_id": "{{recipientId}}",
+  "text": "How was your experience?",
+  "quick_replies": [
+    {
+      "content_type": "text",
+      "title": "Excellent",
+      "payload": "RATING_5",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Gold_Star.svg/100px-Gold_Star.svg.png"
+    },
+    {
+      "content_type": "text",
+      "title": "Good",
+      "payload": "RATING_4",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Gold_Star.svg/100px-Gold_Star.svg.png"
+    },
+    {
+      "content_type": "text",
+      "title": "Poor",
+      "payload": "RATING_2",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Gold_Star.svg/100px-Gold_Star.svg.png"
+    }
+  ]
+}
+
+### 2.3 Quick Replies - User Phone Number
+POST {{baseUrl}}/api/integrations/messenger/send-quick-replies
+Content-Type: application/json
+
+{
+  "recipient_id": "{{recipientId}}",
+  "text": "We need your phone number to complete the order:",
+  "quick_replies": [
+    {
+      "content_type": "user_phone_number",
+      "title": "",
+      "payload": ""
+    }
+  ]
+}
+
+### 2.4 Quick Replies - User Email
+POST {{baseUrl}}/api/integrations/messenger/send-quick-replies
+Content-Type: application/json
+
+{
+  "recipient_id": "{{recipientId}}",
+  "text": "Please share your email to receive updates:",
+  "quick_replies": [
+    {
+      "content_type": "user_email",
+      "title": "",
+      "payload": ""
+    }
+  ]
+}
+
+### 2.5 Quick Replies - Maximum 13 buttons
+POST {{baseUrl}}/api/integrations/messenger/send-quick-replies
+Content-Type: application/json
+
+{
+  "recipient_id": "{{recipientId}}",
+  "text": "Select a number (testing max 13 quick replies):",
+  "quick_replies": [
+    {"content_type": "text", "title": "1", "payload": "NUM_1"},
+    {"content_type": "text", "title": "2", "payload": "NUM_2"},
+    {"content_type": "text", "title": "3", "payload": "NUM_3"},
+    {"content_type": "text", "title": "4", "payload": "NUM_4"},
+    {"content_type": "text", "title": "5", "payload": "NUM_5"},
+    {"content_type": "text", "title": "6", "payload": "NUM_6"},
+    {"content_type": "text", "title": "7", "payload": "NUM_7"},
+    {"content_type": "text", "title": "8", "payload": "NUM_8"},
+    {"content_type": "text", "title": "9", "payload": "NUM_9"},
+    {"content_type": "text", "title": "10", "payload": "NUM_10"},
+    {"content_type": "text", "title": "11", "payload": "NUM_11"},
+    {"content_type": "text", "title": "12", "payload": "NUM_12"},
+    {"content_type": "text", "title": "13", "payload": "NUM_13"}
+  ]
+}
+
+
+###############################################################################
+# 3. GENERIC TEMPLATE - SINGLE CARD
+###############################################################################
+
+### 3.1 Single Card - Basic (image, subtitle, 2 buttons)
+POST {{baseUrl}}/api/integrations/messenger/send-generic-template
+Content-Type: application/json
+
+{
+  "recipient_id": "{{recipientId}}",
+  "elements": [
+    {
+      "title": "Wireless Headphones",
+      "subtitle": "Premium noise-cancelling headphones with 30h battery life",
+      "image_url": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop",
+      "buttons": [
+        {
+          "type": "web_url",
+          "title": "View Details",
+          "url": "https://www.example.com/products/headphones"
+        },
+        {
+          "type": "postback",
+          "title": "Add to Cart",
+          "payload": "ADD_TO_CART_HEADPHONES_001"
+        }
+      ]
+    }
+  ]
+}
+
+### 3.2 Single Card - Maximum 3 buttons
+POST {{baseUrl}}/api/integrations/messenger/send-generic-template
+Content-Type: application/json
+
+{
+  "recipient_id": "{{recipientId}}",
+  "elements": [
+    {
+      "title": "Tech Conference 2024",
+      "subtitle": "Join 5000+ developers · Dec 15-17 · San Francisco",
+      "image_url": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=500&fit=crop",
+      "buttons": [
+        {
+          "type": "web_url",
+          "title": "Event Details",
+          "url": "https://www.example.com/events/tech-conf-2024"
+        },
+        {
+          "type": "postback",
+          "title": "Register",
+          "payload": "REGISTER_EVENT_TECHCONF2024"
+        },
+        {
+          "type": "postback",
+          "title": "Share",
+          "payload": "SHARE_EVENT_TECHCONF2024"
+        }
+      ]
+    }
+  ]
+}
+
+###############################################################################
+# 4. GENERIC TEMPLATE - CAROUSEL
+###############################################################################
+
+### 4.1 Carousel - 3 elements (small carousel)
+POST {{baseUrl}}/api/integrations/messenger/send-generic-template
+Content-Type: application/json
+
+{
+  "recipient_id": "{{recipientId}}",
+  "elements": [
+    {
+      "title": "Wireless Headphones",
+      "subtitle": "Premium sound · $199.99",
+      "image_url": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop",
+      "buttons": [
+        {
+          "type": "web_url",
+          "title": "View",
+          "url": "https://www.example.com/products/headphones"
+        },
+        {
+          "type": "postback",
+          "title": "Buy Now",
+          "payload": "BUY_PRODUCT_001"
+        }
+      ]
+    },
+    {
+      "title": "Smart Watch",
+      "subtitle": "Fitness tracking · $299.99",
+      "image_url": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&h=500&fit=crop",
+      "buttons": [
+        {
+          "type": "web_url",
+          "title": "View",
+          "url": "https://www.example.com/products/smartwatch"
+        },
+        {
+          "type": "postback",
+          "title": "Buy Now",
+          "payload": "BUY_PRODUCT_002"
+        }
+      ]
+    },
+    {
+      "title": "Laptop Stand",
+      "subtitle": "Ergonomic design · $49.99",
+      "image_url": "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=500&h=500&fit=crop",
+      "buttons": [
+        {
+          "type": "web_url",
+          "title": "View",
+          "url": "https://www.example.com/products/laptop-stand"
+        },
+        {
+          "type": "postback",
+          "title": "Buy Now",
+          "payload": "BUY_PRODUCT_003"
+        }
+      ]
+    }
+  ]
+}
+
+### 4.2 Carousel - 5 elements (medium carousel)
+POST {{baseUrl}}/api/integrations/messenger/send-generic-template
+Content-Type: application/json
+
+{
+  "recipient_id": "{{recipientId}}",
+  "elements": [
+    {
+      "title": "Paris, France",
+      "subtitle": "The City of Light · From $899",
+      "image_url": "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=500&h=500&fit=crop",
+      "buttons": [
+        {
+          "type": "postback",
+          "title": "Book Trip",
+          "payload": "BOOK_DESTINATION_PARIS"
+        }
+      ]
+    },
+    {
+      "title": "Tokyo, Japan",
+      "subtitle": "Modern meets traditional · From $1,299",
+      "image_url": "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=500&h=500&fit=crop",
+      "buttons": [
+        {
+          "type": "postback",
+          "title": "Book Trip",
+          "payload": "BOOK_DESTINATION_TOKYO"
+        }
+      ]
+    },
+    {
+      "title": "Bali, Indonesia",
+      "subtitle": "Tropical paradise · From $799",
+      "image_url": "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=500&h=500&fit=crop",
+      "buttons": [
+        {
+          "type": "postback",
+          "title": "Book Trip",
+          "payload": "BOOK_DESTINATION_BALI"
+        }
+      ]
+    },
+    {
+      "title": "New York, USA",
+      "subtitle": "The city that never sleeps · From $699",
+      "image_url": "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=500&h=500&fit=crop",
+      "buttons": [
+        {
+          "type": "postback",
+          "title": "Book Trip",
+          "payload": "BOOK_DESTINATION_NYC"
+        }
+      ]
+    },
+    {
+      "title": "London, UK",
+      "subtitle": "Historic and modern · From $799",
+      "image_url": "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=500&h=500&fit=crop",
+      "buttons": [
+        {
+          "type": "postback",
+          "title": "Book Trip",
+          "payload": "BOOK_DESTINATION_LONDON"
+        }
+      ]
+    }
+  ]
+}
+
+### 4.3 Carousel - Maximum 10 elements
+POST {{baseUrl}}/api/integrations/messenger/send-generic-template
+Content-Type: application/json
+
+{
+  "recipient_id": "{{recipientId}}",
+  "elements": [
+    {"title": "Item 1", "subtitle": "First item", "image_url": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop"},
+    {"title": "Item 2", "subtitle": "Second item", "image_url": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&h=500&fit=crop"},
+    {"title": "Item 3", "subtitle": "Third item", "image_url": "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=500&h=500&fit=crop"},
+    {"title": "Item 4", "subtitle": "Fourth item", "image_url": "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=500&h=500&fit=crop"},
+    {"title": "Item 5", "subtitle": "Fifth item", "image_url": "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=500&h=500&fit=crop"},
+    {"title": "Item 6", "subtitle": "Sixth item", "image_url": "https://images.unsplash.com/photo-1581833971358-2c8b550f87b3?w=500&h=500&fit=crop"},
+    {"title": "Item 7", "subtitle": "Seventh item", "image_url": "https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=500&h=500&fit=crop"},
+    {"title": "Item 8", "subtitle": "Eighth item", "image_url": "https://images.unsplash.com/photo-1588508065123-287b28e013da?w=500&h=500&fit=crop"},
+    {"title": "Item 9", "subtitle": "Ninth item", "image_url": "https://images.unsplash.com/photo-1560343090-f0409e92791a?w=500&h=500&fit=crop"},
+    {"title": "Item 10", "subtitle": "Tenth item (max)", "image_url": "https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?w=500&h=500&fit=crop"}
+  ]
+}
+
+
+###############################################################################
+# 5. MIXED BUTTON TYPES
+###############################################################################
+
+### 5.1 Mix of URL and Postback buttons
+POST {{baseUrl}}/api/integrations/messenger/send-generic-template
+Content-Type: application/json
+
+{
+  "recipient_id": "{{recipientId}}",
+  "elements": [
+    {
+      "title": "Product Details",
+      "subtitle": "See full specs on website or add to cart",
+      "image_url": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop",
+      "buttons": [
+        {
+          "type": "web_url",
+          "title": "View on Website",
+          "url": "https://www.example.com/product"
+        },
+        {
+          "type": "postback",
+          "title": "Add to Cart",
+          "payload": "ADD_TO_CART_001"
+        },
+        {
+          "type": "postback",
+          "title": "Save for Later",
+          "payload": "SAVE_PRODUCT_001"
+        }
+      ]
+    }
+  ]
+}
+
+
+###############################################################################
+# 6. VALIDATION ERROR TESTS (Expected to fail)
+###############################################################################
+
+### 6.1 ERROR: Too many quick replies (14 > 13 max)
+# Expected: 422 Validation Error
+POST {{baseUrl}}/api/integrations/messenger/send-quick-replies
+Content-Type: application/json
+
+{
+  "recipient_id": "{{recipientId}}",
+  "text": "This should fail - too many quick replies:",
+  "quick_replies": [
+    {"content_type": "text", "title": "1", "payload": "1"},
+    {"content_type": "text", "title": "2", "payload": "2"},
+    {"content_type": "text", "title": "3", "payload": "3"},
+    {"content_type": "text", "title": "4", "payload": "4"},
+    {"content_type": "text", "title": "5", "payload": "5"},
+    {"content_type": "text", "title": "6", "payload": "6"},
+    {"content_type": "text", "title": "7", "payload": "7"},
+    {"content_type": "text", "title": "8", "payload": "8"},
+    {"content_type": "text", "title": "9", "payload": "9"},
+    {"content_type": "text", "title": "10", "payload": "10"},
+    {"content_type": "text", "title": "11", "payload": "11"},
+    {"content_type": "text", "title": "12", "payload": "12"},
+    {"content_type": "text", "title": "13", "payload": "13"},
+    {"content_type": "text", "title": "14", "payload": "14"}
+  ]
+}
+
+### 6.2 ERROR: Quick reply title too long (21 chars > 20 max)
+# Expected: 422 Validation Error
+POST {{baseUrl}}/api/integrations/messenger/send-quick-replies
+Content-Type: application/json
+
+{
+  "recipient_id": "{{recipientId}}",
+  "text": "This should fail - title too long:",
+  "quick_replies": [
+    {
+      "content_type": "text",
+      "title": "123456789012345678901",
+      "payload": "TEST"
+    }
+  ]
+}
+
+### 6.3 ERROR: Too many carousel elements (11 > 10 max)
+# Expected: 422 Validation Error
+POST {{baseUrl}}/api/integrations/messenger/send-generic-template
+Content-Type: application/json
+
+{
+  "recipient_id": "{{recipientId}}",
+  "elements": [
+    {"title": "Item 1"},
+    {"title": "Item 2"},
+    {"title": "Item 3"},
+    {"title": "Item 4"},
+    {"title": "Item 5"},
+    {"title": "Item 6"},
+    {"title": "Item 7"},
+    {"title": "Item 8"},
+    {"title": "Item 9"},
+    {"title": "Item 10"},
+    {"title": "Item 11"}
+  ]
+}
+
+### 6.4 ERROR: Element title too long (81 chars > 80 max)
+# Expected: 422 Validation Error
+POST {{baseUrl}}/api/integrations/messenger/send-generic-template
+Content-Type: application/json
+
+{
+  "recipient_id": "{{recipientId}}",
+  "elements": [
+    {
+      "title": "12345678901234567890123456789012345678901234567890123456789012345678901234567890X"
+    }
+  ]
+}
+
+### 6.5 ERROR: Too many buttons per element (4 > 3 max)
+# Expected: 422 Validation Error
+POST {{baseUrl}}/api/integrations/messenger/send-generic-template
+Content-Type: application/json
+
+{
+  "recipient_id": "{{recipientId}}",
+  "elements": [
+    {
+      "title": "Product with Too Many Buttons",
+      "buttons": [
+        {"type": "postback", "title": "Button 1", "payload": "1"},
+        {"type": "postback", "title": "Button 2", "payload": "2"},
+        {"type": "postback", "title": "Button 3", "payload": "3"},
+        {"type": "postback", "title": "Button 4", "payload": "4"}
+      ]
+    }
+  ]
+}
+
+### 6.6 ERROR: Element subtitle too long (81 chars > 80 max)
+# Expected: 422 Validation Error
+POST {{baseUrl}}/api/integrations/messenger/send-generic-template
+Content-Type: application/json
+
+{
+  "recipient_id": "{{recipientId}}",
+  "elements": [
+    {
+      "title": "Test Product",
+      "subtitle": "12345678901234567890123456789012345678901234567890123456789012345678901234567890X"
+    }
+  ]
+}
+
+### 6.7 ERROR: Title-only element (missing subtitle, image_url, and buttons)
+# Expected: 422 Validation Error
+# Facebook requires at least one of: subtitle, image_url, or buttons
+POST {{baseUrl}}/api/integrations/messenger/send-generic-template
+Content-Type: application/json
+
+{
+  "recipient_id": "{{recipientId}}",
+  "elements": [
+    {
+      "title": "Title Only - Invalid"
+    }
+  ]
+}
+
+
+###############################################################################
+# END OF TESTS
+#
+# Summary: 21 unique test cases
+# - Text messages: 2 tests
+# - Quick replies: 5 tests
+# - Single card: 2 tests
+# - Carousel: 3 tests
+# - Mixed buttons: 1 test
+# - Error validation: 7 tests
+#
+# Removed redundant tests:
+# - Multiple similar single card examples (kept 1 basic + 1 max buttons)
+# - Multiple similar carousel examples (kept 3, 5, and 10 elements)
+# - "Real world scenarios" section (redundant with sections 3 & 4)
+# - Duplicate content type variations (kept unique structural tests)
+# - Title-only card moved to error section (Facebook requires subtitle/image/buttons)
+#
+# Notes:
+# - All image URLs use Unsplash (free, no attribution required)
+# - Replace {{recipientId}} variable with actual PSID before testing
+# - Error tests (section 6) are intentionally invalid to test validation
+# - For postback events, check webhook logs to see payload data
+###############################################################################

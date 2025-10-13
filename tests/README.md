@@ -145,3 +145,69 @@ CREATE DATABASE postgres_test;
 4. Descriptive test names
 5. One assertion concept per test
 6. Let transaction rollback handle cleanup
+
+---
+
+## Manual API Testing with REST Client
+
+For manual testing of Messenger integration endpoints, use the provided HTTP file.
+
+**File:** `tests/messenger.http`
+
+### Setup
+
+1. **Install REST Client extension** (VS Code):
+   - Name: REST Client
+   - Author: Huachao Mao
+   - [Marketplace Link](https://marketplace.visualstudio.com/items?itemName=humao.rest-client)
+
+2. **Update recipient ID**:
+   ```http
+   @recipientId = YOUR_RECIPIENT_PSID_HERE
+   ```
+   Get PSID from Messenger webhook logs when a user messages your page.
+
+3. **Start server**:
+   ```bash
+   make dev
+   ```
+
+### Usage
+
+**Execute requests:**
+- Click "Send Request" link above any request
+- Keyboard shortcuts:
+  - `Ctrl+Alt+R` (Mac: `Cmd+Alt+R`) - Send request
+  - `Ctrl+Alt+C` (Mac: `Cmd+Alt+C`) - Cancel request
+
+**Results:** Response appears in a separate tab with formatted JSON.
+
+### Test Categories
+
+The file includes comprehensive test cases:
+
+1. **Text Messages** - Simple and long text messages
+2. **Quick Replies** - Choice buttons, icons, user phone/email
+3. **Generic Template (Single)** - Product cards, articles, events
+4. **Generic Template (Carousel)** - Product catalogs, destinations, menus
+5. **Edge Cases** - Maximum limits (13 quick replies, 10 carousel elements)
+6. **Real World Scenarios** - E-commerce, support, restaurant flows
+7. **Error Tests** - Validation failures (intentionally invalid)
+
+### Local Variations
+
+Create a local copy with your test data (ignored by git):
+
+```bash
+cp tests/messenger.http tests/messenger.local.http
+# Edit messenger.local.http with your actual recipient_id
+```
+
+Pattern `*.local.http` is in `.gitignore` - safe for personal test data.
+
+### Tips
+
+- **Real images**: All examples use Unsplash images (free, no attribution needed)
+- **Postback events**: Check Celery logs to see payload data from button clicks
+- **Validation**: Section 7 tests validation errors (expected to fail)
+- **API docs**: View all schemas at http://localhost:8000/scalar

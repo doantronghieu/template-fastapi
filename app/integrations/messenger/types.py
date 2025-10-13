@@ -77,3 +77,49 @@ class WebhookPayload(TypedDict, total=False):
 
     object: str  # Always "page" for Messenger
     entry: list[Entry]
+
+
+# Outgoing Message Types (Send API)
+
+
+class QuickReplyDict(TypedDict, total=False):
+    """Quick reply button structure for outgoing messages."""
+
+    content_type: str  # "text", "user_phone_number", "user_email"
+    title: str  # Button text (20 char limit, required for text type)
+    payload: str  # Custom data sent to webhook (1000 char limit)
+    image_url: str  # Optional icon image URL
+
+
+class URLButtonDict(TypedDict, total=False):
+    """URL button for templates."""
+
+    type: str  # Always "web_url"
+    title: str  # Button text (20 char limit)
+    url: str  # URL to open in webview
+
+
+class PostbackButtonDict(TypedDict, total=False):
+    """Postback button for templates."""
+
+    type: str  # Always "postback"
+    title: str  # Button text (20 char limit)
+    payload: str  # Custom data sent to webhook (1000 char limit)
+
+
+class DefaultActionDict(TypedDict, total=False):
+    """Default action when template is tapped."""
+
+    type: str  # Always "web_url"
+    url: str  # URL to open
+    webview_height_ratio: str  # "compact", "tall", "full"
+
+
+class GenericElementDict(TypedDict, total=False):
+    """Single element in generic template (carousel item)."""
+
+    title: str  # Element title (80 char limit)
+    subtitle: str  # Element subtitle (80 char limit)
+    image_url: str  # Image URL
+    default_action: DefaultActionDict  # Action when element tapped
+    buttons: list[URLButtonDict | PostbackButtonDict]  # Max 3 buttons

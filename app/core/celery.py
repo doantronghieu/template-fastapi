@@ -27,18 +27,19 @@ celery_app.conf.update(
     worker_prefetch_multiplier=settings.CELERY_WORKER_PREFETCH_MULTIPLIER,
     worker_max_tasks_per_child=settings.CELERY_WORKER_MAX_TASKS_PER_CHILD,
     # Redis Cloud free tier optimization (30 connection limit)
-    # Target: <15 connections (~50% usage) to stay well below 80% alert threshold
+    # Target: <10 connections (~33% usage) to stay well below 80% alert threshold
+    # With concurrency=1 and pool=solo, minimal connections needed
     broker_pool_limit=1,  # Single connection pool for broker
-    redis_max_connections=10,  # Global connection cap across all pools
+    redis_max_connections=5,  # Aggressive cap: 1 worker needs far fewer connections
     # Result backend connection pooling
     result_backend_transport_options={
-        "max_connections": 5,
-        "socket_keepalive": True,  # enabled for connection reuse
+        "max_connections": 2,  # Reduced from 5
+        "socket_keepalive": True,
         "socket_keepalive_options": {1: 1, 2: 1, 3: 3},
     },
     # Broker transport connection pooling
     broker_transport_options={
-        "max_connections": 5,
+        "max_connections": 2,  # Reduced from 5
         "socket_keepalive": True,
         "visibility_timeout": 1800,  # 30 minutes
     },

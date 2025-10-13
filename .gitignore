@@ -28,6 +28,9 @@ htmlcov/
 .env
 .env.local
 
+# Local HTTP test files
+*.local.http
+
 # Logs
 *.log
 

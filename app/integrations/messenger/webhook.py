@@ -33,16 +33,20 @@ def _format_attachment(attachment: dict) -> str:
 
 def parse_webhook_payload(data: WebhookPayload) -> list[dict]:
     """
-    Parse Facebook Messenger webhook payload into normalized message events.
+    Parse Facebook Messenger webhook payload into normalized events.
 
-    Facebook sends nested structure: entry → messaging → sender/message.
-    This flattens it into simple dicts with sender_id, message_text, conversation_id.
+    Facebook sends nested structure: entry → messaging → sender/message/postback.
+    This flattens it into simple dicts for processing.
 
     Args:
         data: Webhook payload from Facebook (see types.py for structure)
 
     Returns:
-        List of normalized message events ready for processing
+        List of normalized events with event_type discriminator
+
+    Event types:
+        - message: Text or attachment from user
+        - postback: Button click from user
 
     Note:
         - Attachments are converted to descriptive text (e.g., "[User sent an image]")
@@ -59,23 +63,41 @@ def parse_webhook_payload(data: WebhookPayload) -> list[dict]:
                 logger.debug("Skip: no sender_id")
                 continue
 
+            # Check for message event
             message = messaging.get("message", {})
-            message_text = message.get("text")
-            attachments = message.get("attachments", [])
+            if message:
+                message_text = message.get("text")
+                attachments = message.get("attachments", [])
 
-            # Helper to create event dict
-            def create_event(text: str) -> dict:
-                return {
-                    "sender_id": sender_id,
-                    "message_text": text,
-                    "conversation_id": sender_id,
-                }
+                # Helper to create message event dict
+                def create_message_event(text: str) -> dict:
+                    return {
+                        "event_type": "message",
+                        "sender_id": sender_id,
+                        "message_text": text,
+                        "conversation_id": sender_id,
+                    }
 
-            # Process text content if present
-            if message_text:
-                events.append(create_event(message_text))
+                # Process text content if present
+                if message_text:
+                    events.append(create_message_event(message_text))
 
-            # Process attachments (message can have both text AND attachments)
-            events.extend(create_event(_format_attachment(att)) for att in attachments)
+                # Process attachments (message can have both text AND attachments)
+                events.extend(
+                    create_message_event(_format_attachment(att)) for att in attachments
+                )
+
+            # Check for postback event (button click)
+            postback = messaging.get("postback", {})
+            if postback:
+                events.append(
+                    {
+                        "event_type": "postback",
+                        "sender_id": sender_id,
+                        "payload": postback.get("payload", ""),
+                        "title": postback.get("title", ""),
+                        "conversation_id": sender_id,
+                    }
+                )
 
     return events
