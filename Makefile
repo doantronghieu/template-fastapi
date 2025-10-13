@@ -1,6 +1,11 @@
 # FastAPI Template - Development Operations
 # Quick Start: make setup → cp .env.example .env → make infra-up → make db-migrate message="init" → make db-upgrade → make dev
 
+# Load environment variables from .env file (similar to docker-compose env_file)
+# The '-' prefix means don't fail if .env doesn't exist
+-include .env
+export
+
 .PHONY: help setup dev celery flower ngrok test lint format clean db-migrate db-upgrade db-downgrade db-reset db-seed infra-up infra-down infra-reset infra-logs client-generate
 
 help:
@@ -51,14 +56,13 @@ celery:
 	uv run celery -A app.core.celery:celery_app worker --loglevel=info --concurrency=2
 
 # Start Flower monitoring UI locally (without Docker)
-# Dashboard: http://127.0.0.1:5555
+# Dashboard: http://127.0.0.1:${FLOWER_PORT:-5555}
 flower:
-	uv run celery -A app.core.celery:celery_app flower --port=5555
+	uv run celery -A app.core.celery:celery_app flower --port=$${FLOWER_PORT:-5555}
 
 # Start ngrok tunnel to expose local server (reads PORT from .env)
 ngrok:
-	@PORT=$$(grep '^PORT=' .env | cut -d '=' -f2); \
-	if [ -z "$$PORT" ]; then \
+	@if [ -z "$$PORT" ]; then \
 		echo "Error: PORT not found in .env file"; \
 		exit 1; \
 	fi; \
