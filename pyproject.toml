@@ -28,6 +28,7 @@ dependencies = [
     "langchain-openai>=0.3.34",
     "langchain-groq>=0.3.8",
     "python-dotenv>=1.1.1",
+    "html2text>=2025.4.15",
 ]
 
 [project.optional-dependencies]

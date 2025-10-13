@@ -18,10 +18,12 @@
 
 ### Variables
 @baseUrl = http://localhost:8000
-@recipientId = 24808142348793977
+# Read TEST_USER_ID from .env file
+@recipientId = {{$dotenv TEST_USER_ID}}
 
 ### Note: Get recipient_id from Messenger webhook logs when testing
 ### Or use Facebook Graph API to get test user PSIDs
+### Or configure TEST_USER_ID in .env file
 
 
 ###############################################################################

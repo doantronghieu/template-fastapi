@@ -16,10 +16,8 @@ api_router.include_router(tasks.router, prefix="/tasks", tags=[APITag.TASKS])
 api_router.include_router(users.router, prefix="/users", tags=[APITag.USERS])
 api_router.include_router(lib.router, prefix="/lib")
 
-# Integration routes
-api_router.include_router(
-    integration_router, prefix="/integrations", tags=[APITag.MESSENGER]
-)
+# Integration routes (tags applied at integration router level)
+api_router.include_router(integration_router, prefix="/integrations")
 
 # Webhook routes
 api_router.include_router(webhook_router, prefix="/webhooks", tags=[APITag.WEBHOOKS])

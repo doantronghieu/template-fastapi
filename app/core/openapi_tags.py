@@ -33,6 +33,7 @@ class APITag(str, Enum):
 
     # Integration tags
     MESSENGER = "Messenger"
+    GMAIL = "Gmail"
 
 
 # Tag metadata: description and group assignment
@@ -65,6 +66,10 @@ TAG_METADATA: dict[APITag, dict] = {
     # Integration
     APITag.MESSENGER: {
         "description": "Facebook Messenger API operations",
+        "group": TagGroup.INTEGRATION,
+    },
+    APITag.GMAIL: {
+        "description": "Gmail IMAP integration for searching emails",
         "group": TagGroup.INTEGRATION,
     },
     # Lib
