@@ -5,9 +5,15 @@ from fastapi import APIRouter, Depends, Query
 from app.core.dependencies import verify_api_key
 from app.integrations.gmail import GmailClientDep
 from app.schemas.gmail import EmailListResponse, EmailResponse, EmailSearchRequest
-from app.services.gmail_service_dependencies import GmailServiceDep
+from app.services.gmail_service import GmailServiceDep
 
 router = APIRouter(dependencies=[Depends(verify_api_key)])
+
+
+def _to_email_list_response(emails: list) -> EmailListResponse:
+    """Convert raw email list to EmailListResponse with count."""
+    email_responses = [EmailResponse(**email) for email in emails]
+    return EmailListResponse(count=len(email_responses), items=email_responses)
 
 
 @router.post("/search", response_model=EmailListResponse)
@@ -31,8 +37,7 @@ async def search_emails(
         {"raw_criteria": ["LARGER", "1000000", "FLAGGED"], "limit": 20}
     """
     emails = client.search_emails(**filters.model_dump())
-    email_responses = [EmailResponse(**email) for email in emails]
-    return EmailListResponse(count=len(email_responses), items=email_responses)
+    return _to_email_list_response(emails)
 
 
 @router.get("/today", response_model=EmailListResponse)
@@ -51,8 +56,7 @@ async def get_today_emails(
         Email list with count of emails received today in Vietnam timezone
     """
     emails = service.get_today_emails(limit=limit)
-    email_responses = [EmailResponse(**email) for email in emails]
-    return EmailListResponse(count=len(email_responses), items=email_responses)
+    return _to_email_list_response(emails)
 
 
 @router.get("/yesterday", response_model=EmailListResponse)
@@ -72,5 +76,4 @@ async def get_yesterday_emails(
         Email list with count of emails received yesterday in Vietnam timezone
     """
     emails = service.get_yesterday_emails(limit=limit)
-    email_responses = [EmailResponse(**email) for email in emails]
-    return EmailListResponse(count=len(email_responses), items=email_responses)
+    return _to_email_list_response(emails)

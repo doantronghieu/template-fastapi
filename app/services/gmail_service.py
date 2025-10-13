@@ -4,9 +4,12 @@ Business logic layer for Gmail IMAP operations, separating concerns from API lay
 """
 
 from datetime import datetime, timedelta
+from typing import Annotated
 from zoneinfo import ZoneInfo
 
-from app.integrations.gmail import GmailClient
+from fastapi import Depends
+
+from app.integrations.gmail import GmailClient, GmailClientDep
 
 
 class GmailService:
@@ -69,3 +72,11 @@ class GmailService:
         return self.client.search_emails(
             since_date=start_date, before_date=end_date, limit=limit
         )
+
+
+def get_gmail_service(client: GmailClientDep) -> GmailService:
+    """Provide GmailService instance with injected client."""
+    return GmailService(client=client)
+
+
+GmailServiceDep = Annotated[GmailService, Depends(get_gmail_service)]
