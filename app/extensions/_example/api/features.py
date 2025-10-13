@@ -9,7 +9,7 @@ from app.extensions._example.schemas.feature import (
 )
 from app.extensions._example.services import ExampleFeatureServiceDep
 
-router = APIRouter()
+router = APIRouter(tags=["Example Features"])
 
 
 @router.get("/features", response_model=list[ExampleFeatureRead])

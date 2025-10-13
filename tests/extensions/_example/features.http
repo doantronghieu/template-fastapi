@@ -1,0 +1,31 @@
+###############################################################################
+# Example Extension API Tests
+#
+# Extension: REST Client (Huachao Mao)
+# https://marketplace.visualstudio.com/items?itemName=humao.rest-client
+#
+# Setup:
+# 1. Install REST Client extension in VS Code
+# 2. Ensure FastAPI server is running: make dev
+# 3. Enable example extension: ENABLED_EXTENSIONS=_example in .env
+# 4. Click "Send Request" above any request to execute it
+###############################################################################
+
+### Variables
+@baseUrl = http://localhost:8000
+
+###############################################################################
+# Example Endpoints
+###############################################################################
+
+### Get all features
+GET {{baseUrl}}/api/extensions/_example/features
+
+### Create a feature
+POST {{baseUrl}}/api/extensions/_example/features
+Content-Type: application/json
+
+{
+  "name": "Test Feature",
+  "description": "This is a test feature"
+}

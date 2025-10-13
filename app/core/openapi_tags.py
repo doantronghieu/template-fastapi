@@ -5,6 +5,10 @@ Auto-generates OpenAPI tags metadata and x-tagGroups for nested navigation.
 """
 
 from enum import Enum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from fastapi import FastAPI
 
 
 class TagGroup(str, Enum):
@@ -84,45 +88,52 @@ TAG_METADATA: dict[APITag, dict] = {
 }
 
 
-def get_openapi_tags(extension_tags: list[str] | None = None) -> list[dict]:
+def get_openapi_tags() -> list[dict]:
     """Generate OpenAPI tags metadata from TAG_METADATA.
-
-    Args:
-        extension_tags: Optional list of extension tag names to append
 
     Returns:
         List of tag dictionaries for FastAPI openapi_tags parameter
     """
-    tags = [
+    return [
         {"name": tag.value, "description": meta["description"]}
         for tag, meta in TAG_METADATA.items()
     ]
 
-    # Add extension tags dynamically
-    if extension_tags:
-        for ext_name in extension_tags:
-            tags.append(
-                {
-                    "name": ext_name,
-                    "description": f"🔌 {ext_name.lower().replace(' ', '_')} extension features",
-                }
-            )
 
-    return tags
+def get_extension_tags_from_routes(app: "FastAPI") -> list[dict]:
+    """Auto-discover extension tags by scanning registered routes.
 
-
-def get_tag_groups(extension_tags: list[str] | None = None) -> list[dict]:
-    """Generate x-tagGroups for nested navigation in API docs.
-
-    Groups tags by their assigned TagGroup from TAG_METADATA.
+    Called once at OpenAPI schema generation (lazy evaluation).
+    Scans all routes under /api/extensions/ prefix and extracts unique tags.
 
     Args:
-        extension_tags: Optional list of extension tag names to group
+        app: FastAPI application instance with registered routes
+
+    Returns:
+        List of tag dictionaries with auto-generated descriptions
+    """
+    extension_tags = set()
+
+    for route in app.routes:
+        if hasattr(route, "path") and "/extensions/" in route.path:
+            tags = getattr(route, "tags", [])
+            extension_tags.update(tags)
+
+    return [
+        {"name": tag, "description": f"🔌 {tag} features"}
+        for tag in sorted(extension_tags)
+    ]
+
+
+def get_tag_groups_from_routes(app: "FastAPI") -> list[dict]:
+    """Generate x-tagGroups including auto-discovered extension tags.
+
+    Args:
+        app: FastAPI application instance
 
     Returns:
         List of tag group dictionaries for x-tagGroups extension
     """
-    # Group tags by their assigned group
     groups: dict[TagGroup, list[str]] = {}
     for tag, meta in TAG_METADATA.items():
         group = meta["group"]
@@ -130,11 +141,13 @@ def get_tag_groups(extension_tags: list[str] | None = None) -> list[dict]:
             groups[group] = []
         groups[group].append(tag.value)
 
-    # Convert to x-tagGroups format
     tag_groups = [{"name": group.value, "tags": tags} for group, tags in groups.items()]
 
-    # Add extensions group if extensions exist
-    if extension_tags:
-        tag_groups.append({"name": TagGroup.EXTENSIONS.value, "tags": extension_tags})
+    extension_tag_dicts = get_extension_tags_from_routes(app)
+    if extension_tag_dicts:
+        extension_tag_names = [tag_dict["name"] for tag_dict in extension_tag_dicts]
+        tag_groups.append(
+            {"name": TagGroup.EXTENSIONS.value, "tags": extension_tag_names}
+        )
 
     return tag_groups

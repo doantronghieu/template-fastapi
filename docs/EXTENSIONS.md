@@ -184,9 +184,10 @@ ENABLED_EXTENSIONS=extension_a,extension_b,extension_c
 - Export in `services/__init__.py` with explicit imports and `__all__` list
 
 ### Creating API Endpoints
-- Create `APIRouter()` in `api/feature.py` with route handlers
+- Create `APIRouter()` in `api/feature.py` with route handlers and tags
 - Inject services via type alias: `async def endpoint(service: MyServiceDep)`
 - Aggregate routes in `api/router.py` using `router.include_router()`
+- **Tags auto-discovered**: Define tags in router (e.g., `tags=["My Feature"]`), system automatically registers in API docs
 
 ### Creating Tasks
 - Create task function with `@celery_app.task(name=f"{settings.CELERY_TASKS_MODULE}.task_name")`
@@ -201,8 +202,22 @@ ENABLED_EXTENSIONS=extension_a,extension_b,extension_c
 ## Testing
 
 ### Test Structure
-- Create `tests/extensions/{extension_name}/` directory
-- Add `test_api.py`, `test_models.py`, `test_services.py`, `test_tasks.py`
+- Create `tests/extensions/{extension_name}/` directory for REST Client test files
+- Add `.http` files for manual API testing (e.g., `pms.http`, `features.http`)
+- Template available: `tests/extensions/_example/features.http`
+- Use REST Client extension in VS Code for in-editor HTTP requests
+
+### REST Client Tests
+```http
+### Variables
+@baseUrl = http://localhost:8000
+
+### Test endpoint
+GET {{baseUrl}}/api/extensions/my_extension/endpoint
+```
+
+### PyTest Integration Tests
+- Add `test_api.py`, `test_models.py`, `test_services.py`, `test_tasks.py` as needed
 - Use `async def` for all test functions with AsyncClient
 - Extension enabled in `tests/conftest.py` via `os.environ.setdefault("ENABLED_EXTENSIONS", "_example")`
 

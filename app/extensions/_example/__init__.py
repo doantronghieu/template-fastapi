@@ -7,6 +7,10 @@ Copy this directory and modify for your specific needs.
 from fastapi import APIRouter
 from sqladmin import Admin
 
+# Main extension router - aggregates all extension routes
+# /EXTENSION_NAME placeholder will be auto-replaced by loader
+extension_router = APIRouter(prefix="/EXTENSION_NAME")
+
 
 def setup_api(app_router: APIRouter) -> None:
     """Register API routes for this extension.
@@ -16,11 +20,11 @@ def setup_api(app_router: APIRouter) -> None:
     """
     from .api.router import router
 
-    app_router.include_router(
-        router,
-        prefix="/example",
-        tags=["Example Extension"],
-    )
+    # Include extension's internal router
+    extension_router.include_router(router)
+
+    # Register extension router with app
+    app_router.include_router(extension_router)
 
 
 def setup_admin(admin: Admin) -> None:

@@ -93,6 +93,13 @@ def load_extensions(hook: ExtensionHook, *args, **kwargs) -> None:
     for ext_name in settings.ENABLED_EXTENSIONS:
         try:
             ext_module = importlib.import_module(f"app.extensions.{ext_name}")
+
+            # Replace /EXTENSION_NAME placeholder in extension_router prefix if it exists
+            if hasattr(ext_module, "extension_router"):
+                router = ext_module.extension_router
+                if hasattr(router, "prefix") and router.prefix == "/EXTENSION_NAME":
+                    router.prefix = f"/extensions/{ext_name}"
+
             setup_func = getattr(ext_module, f"setup_{hook}", None)
 
             if setup_func and callable(setup_func):

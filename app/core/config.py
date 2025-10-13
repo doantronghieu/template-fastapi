@@ -12,6 +12,10 @@ class Settings(BaseSettings):
 
     # FastAPI
     PORT: int = Field(default=8000, description="FastAPI server port")
+    APP_ENVIRONMENT: str = Field(
+        default="development",
+        description="Application environment (development/production)",
+    )
 
     # PostgreSQL
     POSTGRES_USER: str = Field(..., description="PostgreSQL database user")

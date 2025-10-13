@@ -15,7 +15,11 @@ from app.api.router import api_router  # noqa: E402
 from app.core.admin import setup_admin  # noqa: E402
 from app.core.config import settings  # noqa: E402
 from app.core.database import init_db  # noqa: E402
-from app.core.openapi_tags import get_openapi_tags, get_tag_groups  # noqa: E402
+from app.core.openapi_tags import (  # noqa: E402
+    get_extension_tags_from_routes,
+    get_openapi_tags,
+    get_tag_groups_from_routes,
+)
 from app.core.templates import BASE_DIR  # noqa: E402
 
 
@@ -33,11 +37,7 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     lifespan=lifespan,
-    openapi_tags=get_openapi_tags(
-        extension_tags=[
-            ext.replace("_", " ").title() for ext in settings.ENABLED_EXTENSIONS
-        ]
-    ),
+    openapi_tags=get_openapi_tags(),  # Only core tags initially
 )
 
 # Configure CORS
@@ -67,22 +67,26 @@ def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
 
+    # Generate core tags
+    core_tags = get_openapi_tags()
+
+    # Auto-discover extension tags from registered routes
+    extension_tags = get_extension_tags_from_routes(app)
+
+    # Combine all tags
+    all_tags = core_tags + extension_tags
+
     openapi_schema = get_openapi(
         title=app.title,
         version=app.version,
         openapi_version=app.openapi_version,
         description=app.description,
         routes=app.routes,
-        tags=app.openapi_tags,
+        tags=all_tags,  # Combined tags
     )
 
-    # Add x-tagGroups for nested navigation in Scalar
-    extension_tags = [
-        ext.replace("_", " ").title() for ext in settings.ENABLED_EXTENSIONS
-    ]
-    openapi_schema["x-tagGroups"] = get_tag_groups(
-        extension_tags=extension_tags if extension_tags else None
-    )
+    # Add x-tagGroups with auto-discovered extension tags
+    openapi_schema["x-tagGroups"] = get_tag_groups_from_routes(app)
 
     app.openapi_schema = openapi_schema
     return app.openapi_schema
