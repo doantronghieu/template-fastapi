@@ -15,7 +15,6 @@ Example:
     ... )
 """
 
-from app.lib.langchain.llm import LangChainLLMProvider
 from app.lib.llm.base import LLMProvider
 from app.lib.llm.config import (
     InvocationMode,
@@ -38,8 +37,6 @@ __all__ = [
     "ModelProvider",
     "InvocationMode",
     "get_provider_for_model",
-    # Providers
-    "LangChainLLMProvider",
     # Dependencies
     "get_llm_provider",
     "LLMProviderDep",

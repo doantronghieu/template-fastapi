@@ -485,7 +485,22 @@ Avoid deep nesting (`app/lib/ai/llm/`) - use flat structure with clear capabilit
 - Trigger: `task_function.delay(*args)` or `.apply_async()` for options
 
 ### Adding Admin View
+
+**Basic configuration:**
 - Create `ModelView` subclass in `app/admin/views.py` with `model=YourModel` - auto-registered
+- Set display name, icon, column lists for list/form/detail pages, search fields, sortable columns
+
+**Column groups for reusability:**
+- Define module-level constants grouping related columns by domain 
+- Use spread operator to compose configurations from multiple groups
+- Enables single source of truth, reduces duplication, provides clear semantic organization
+
+**Display formatters:**
+- Add `column_formatters` dict mapping columns to formatting functions
+
+**Filters compatibility:**
+- Avoid `column_filters` due to SQLAdmin compatibility issues with model column objects
+- Rely on search and sort for data management instead
 
 ### Package Exports
 - **Models/Services/Schemas**: Explicit imports + `__all__ = ["YourClass"]`
