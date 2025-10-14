@@ -1,0 +1,33 @@
+# Git and version control
+.git/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+
+# Environment files
+.env*
+!.env.example
+
+# Testing
+tests/
+
+# Docker files
+docker-compose.yml
+**/Dockerfile*
+
+# Temporary files
+tmp/
+*.log

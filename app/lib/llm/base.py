@@ -8,29 +8,34 @@ from collections.abc import AsyncIterator
 from typing import Protocol
 
 from langchain_core.language_models import BaseChatModel
+from pydantic import BaseModel
 
 
 class LLMProvider(Protocol):
     """Protocol defining the interface for LLM provider implementations.
 
     All provider implementations must support:
-    - Model creation with configurable parameters
+    - Model creation with configurable parameters (basic, with tools, or structured output)
     - Three invocation modes: invoke, batch, stream
     """
 
-    def create_chat_model(
+    def create_model(
         self,
         model: str,
         model_provider: str | None = None,
         temperature: float = 0.0,
+        tools: list | None = None,
+        schema: type[BaseModel] | None = None,
         **kwargs,
     ) -> BaseChatModel:
-        """Create a chat model instance.
+        """Create a chat model instance with optional tools and structured output.
 
         Args:
             model: Model identifier (e.g., "gpt-5-nano")
             model_provider: Provider identifier (e.g., "openai")
             temperature: Sampling temperature (0.0 to 1.0)
+            tools: Optional list of tools to bind to the model
+            schema: Optional Pydantic model class for structured output
             **kwargs: Additional provider-specific parameters
 
         Returns:

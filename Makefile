@@ -6,7 +6,7 @@
 -include .env
 export
 
-.PHONY: help setup dev celery flower ngrok test lint format clean db-migrate db-upgrade db-downgrade db-reset db-seed infra-up infra-down infra-reset infra-logs client-generate
+.PHONY: help setup dev celery flower ngrok test lint format clean db-migrate db-upgrade db-downgrade db-reset db-seed infra-up infra-down infra-reset infra-logs app-build app-up app-down app-restart app-logs client-generate
 
 help:
 	@echo "FastAPI Template - Available Commands"
@@ -15,12 +15,19 @@ help:
 	@echo "  make dev             - Start development server (http://127.0.0.1:8000)"
 	@echo "  make celery          - Start Celery worker locally (without Docker)"
 	@echo "  make flower          - Start Flower monitoring UI locally (http://127.0.0.1:5555)"
+	@echo "  make beat            - Start Celery Beat scheduler locally (without Docker)"
 	@echo "  make ngrok           - Start ngrok tunnel (reads PORT from .env)"
 	@echo ""
-	@echo "  make infra-up        - Start infrastructure (Celery, Flower)"
+	@echo "  make infra-up        - Start infrastructure (Celery worker, Beat, Flower)"
 	@echo "  make infra-down      - Stop infrastructure"
 	@echo "  make infra-reset     - Destroy and recreate infrastructure"
 	@echo "  make infra-logs      - View infrastructure logs"
+	@echo ""
+	@echo "  make app-build       - Build FastAPI Docker image"
+	@echo "  make app-up          - Build and start FastAPI container"
+	@echo "  make app-down        - Stop FastAPI container"
+	@echo "  make app-restart     - Restart FastAPI container"
+	@echo "  make app-logs        - View FastAPI container logs"
 	@echo ""
 	@echo "  make db-migrate message=\"msg\" - Generate migration"
 	@echo "  make db-upgrade      - Apply migrations"
@@ -60,6 +67,11 @@ celery:
 flower:
 	uv run celery -A app.core.celery:celery_app flower --port=$${FLOWER_PORT:-5555}
 
+# Start Celery Beat scheduler locally (without Docker)
+# Schedules: View in Flower dashboard at http://127.0.0.1:${FLOWER_PORT:-5555}
+beat:
+	uv run celery -A app.core.celery:celery_app beat --scheduler redbeat.schedulers:RedBeatScheduler --loglevel=info
+
 # Start ngrok tunnel to expose local server (reads PORT from .env)
 ngrok:
 	@if [ -z "$$PORT" ]; then \
@@ -72,30 +84,30 @@ ngrok:
 # ============================================================================
 # Infrastructure (Docker Compose)
 # ============================================================================
-# Services: Celery worker, Flower monitoring
+# Services: Celery worker, Celery Beat scheduler, Flower monitoring
 # Database: Using Supabase (configured in .env)
 # Redis: Using Redis Cloud (configured in .env)
 # All services run in Docker with health checks
 
 # Start all infrastructure services in detached mode (excluding app)
-# Services: celery-worker, flower
+# Services: celery-worker, celery-beat, flower
 # Flower UI: http://127.0.0.1:5555
 # Note: Always rebuilds images before starting
 infra-up:
-	docker compose up -d --build celery-worker flower
+	docker compose up -d --build celery-worker celery-beat flower
 
 # Stop and remove all containers
 infra-down:
 	docker compose down
 
-# Destroy and recreate all infrastructure (Celery, Flower)
+# Destroy and recreate all infrastructure (Celery worker, Beat, Flower)
 # Note: Database is on Supabase - use 'make db-reset' to reset database
 # Note: Redis is on Redis Cloud - data persists externally
 # Note: Always rebuilds images before starting
 infra-reset:
 	@echo "Destroying infrastructure and recreating..."
 	docker compose down -v
-	docker compose up -d --build celery-worker flower
+	docker compose up -d --build celery-worker celery-beat flower
 	@echo "Waiting for services to be ready..."
 	@sleep 3
 	@echo "Infrastructure reset complete!"
@@ -103,6 +115,34 @@ infra-reset:
 # View logs from all services (Ctrl+C to exit)
 infra-logs:
 	docker compose logs -f
+
+# ============================================================================
+# Application (Docker)
+# ============================================================================
+# FastAPI application in Docker container
+# For local development without Docker, use: make dev
+
+# Build FastAPI Docker image
+app-build:
+	docker compose build app
+
+# Build and start FastAPI container
+# Server: http://127.0.0.1:${PORT:-8000}
+# Note: Always rebuilds image before starting
+app-up:
+	docker compose up -d --build app
+
+# Stop FastAPI container
+app-down:
+	docker compose stop app
+
+# Restart FastAPI container
+app-restart:
+	docker compose restart app
+
+# View FastAPI container logs (Ctrl+C to exit)
+app-logs:
+	docker compose logs -f app
 
 # ============================================================================
 # Database Migrations (Alembic)

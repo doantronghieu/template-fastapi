@@ -25,7 +25,7 @@ FastAPI template with SQLModel (async SQLAlchemy), Supabase (PostgreSQL), Redis 
 # Initial setup (one-time)
 make setup                                    # Create venv and install dependencies
 cp .env.example .env                          # Configure environment variables (add Supabase and Redis Cloud credentials)
-make infra-up                                 # Start Celery, Flower
+make infra-up                                 # Start Celery worker, Beat scheduler, Flower
 make db-upgrade                               # Apply migrations to Supabase
 
 # Development workflow
@@ -41,10 +41,11 @@ make dev                                      # Start FastAPI server at http://1
 - `make test` - Run pytest suite
 
 ### Infrastructure (Docker Compose)
-- `make infra-up` - Start Celery worker, Flower (http://127.0.0.1:5555)
+- `make infra-up` - Start Celery worker, Beat scheduler, Flower (http://127.0.0.1:5555)
 - `make infra-down` - Stop all containers
 - `make infra-reset` - Destroy and recreate infrastructure
 - `make infra-logs` - Follow logs from all services
+- `make beat` - Start Beat scheduler locally (for development/testing)
 
 ### Database Migrations (Alembic)
 - `make db-migrate message="description"` - Generate migration (auto-detects model changes)
@@ -88,7 +89,7 @@ make dev                                      # Start FastAPI server at http://1
 - `app/schemas/` - Pydantic request/response schemas
 - `app/services/` - Business logic layer with auto-discovery
 - `app/tasks/` - Celery task definitions
-- `app/admin/views.py` - Admin ModelView classes (auto-registered)
+- `app/admin/` - SQLAdmin views and reusable filter utilities (auto-registered)
 
 **Supporting directories:**
 - `templates/` - Jinja2 templates (base.html, pages, partials)
@@ -166,6 +167,7 @@ Pydantic BaseSettings with required fields (no defaults for sensitive data). All
 **Configuration**: Broker and Backend (Redis Cloud database 0)
 - Connection via `REDIS_URL` directly (free tier supports single database only)
 - Tasks auto-discovered from `app/tasks/` via glob pattern in `__init__.py`
+- Beat schedules auto-discovered from extension `tasks/schedules.py` files with automatic name prefixing
 
 **Redis Cloud Free Tier Limit**:
 - Max 30 concurrent connections - optimized configuration in `app/core/celery.py` keeps usage ~33%
@@ -173,9 +175,16 @@ Pydantic BaseSettings with required fields (no defaults for sensitive data). All
 **Task execution**:
 - Trigger: Call `task_function.delay(*args)` to get AsyncResult with `.id`
 - Status: Use `AsyncResult(task_id, app=celery_app)` to access `.state`, `.result`, `.ready()`
+- Scheduled: Define in extension's `tasks/schedules.py` for automatic periodic execution
+
+**Beat scheduler**:
+- Uses Redbeat (Redis-based) for production-grade schedule persistence across container restarts
+- Schedules defined in extension directories, automatically discovered and registered at startup
+- Schedule keys prefixed with extension name to prevent conflicts between extensions
 
 **Docker services**:
 - `celery-worker`: Worker process (background)
+- `celery-beat`: Beat scheduler (periodic tasks)
 - `flower`: Monitoring UI at http://127.0.0.1:5555
 
 ### API Layer
@@ -224,9 +233,12 @@ Pydantic BaseSettings with required fields (no defaults for sensitive data). All
 
 **Access**: http://127.0.0.1:8000/admin
 
-**Architecture**: Auto-discovers all `ModelView` subclasses from `app/admin/views.py`
-- No manual registration needed - just create view class in `app/admin/views.py`
+**Architecture**: Auto-discovers `ModelView` subclasses via module namespace scanning
+- Core admin: `app/core/admin.py` scans `app/admin/views` module
+- Extension admin: Each extension's `setup_admin()` scans its `admin.views` module
+- No manual registration needed - views imported into namespace are auto-registered
 - Uses `sync_engine` (psycopg2) for database operations
+- Reusable filter utilities available in `app/admin/filters.py` (`EnumFilterBase` for enum-based filters)
 
 ### Testing Infrastructure
 
@@ -453,6 +465,27 @@ Avoid deep nesting (`app/lib/ai/llm/`) - use flat structure with clear capabilit
 
 ## Development Patterns
 
+### File Naming Conventions
+
+**Principle**: Name related files using consistent prefixes for discoverability and maintainability.
+
+**Feature-based naming**:
+- Use shared prefix matching the feature or domain name
+- Apply pattern `{feature}_{type}.py` where type indicates file purpose (service, tasks, schemas, etc.)
+- Applies to: services, tasks, API endpoints, schemas, test, etc. files
+- Files sort together alphabetically, making feature boundaries clear
+
+**Benefits**:
+- Quick visual grouping in file explorers
+- Immediate understanding of feature scope
+- Simplified navigation and refactoring
+- Clear boundaries between different features
+
+**Enum organization**:
+- Centralize enums in dedicated `enums.py` within model directories
+- Prevents circular import issues
+- Provides single source of truth for type definitions
+
 ### Adding New Model
 
 1. Create SQLModel class in `app/models/your_model.py` with `table=True` and explicit `__tablename__`
@@ -484,23 +517,39 @@ Avoid deep nesting (`app/lib/ai/llm/`) - use flat structure with clear capabilit
 - Add `auto_import(__file__, "app.tasks")` to `tasks/__init__.py`
 - Trigger: `task_function.delay(*args)` or `.apply_async()` for options
 
+### Adding Extension Beat Schedule
+- Create `tasks/schedules.py` in extension directory with `SCHEDULES` dictionary
+- Define schedules using `crontab()` expressions from `celery.schedules`
+- Schedule keys automatically prefixed with extension name to prevent conflicts (e.g., `hotel.daily-task`)
+- Schedules execute in timezone configured by `CELERY_TIMEZONE` setting
+- No core code changes needed - auto-discovered at startup from enabled extensions
+- View registered schedules in Flower UI or Redis with `redbeat:*` key pattern
+- Reference template in `app/extensions/_example/tasks/schedules.py` for format examples
+
 ### Adding Admin View
 
 **Basic configuration:**
 - Create `ModelView` subclass in `app/admin/views.py` with `model=YourModel` - auto-registered
 - Set display name, icon, column lists for list/form/detail pages, search fields, sortable columns
 
+**File organization:**
+- Split into multiple files for better maintainability
+- Structure: `admin/views.py` re-exports all view classes from individual files
+- Auto-discovery scans module namespace via `inspect.getmembers()` - views imported in `views.py` are automatically registered
+
 **Column groups for reusability:**
-- Define module-level constants grouping related columns by domain 
+- Define module-level constants grouping related columns by domain
 - Use spread operator to compose configurations from multiple groups
 - Enables single source of truth, reduces duplication, provides clear semantic organization
 
 **Display formatters:**
 - Add `column_formatters` dict mapping columns to formatting functions
 
-**Filters compatibility:**
-- Avoid `column_filters` due to SQLAdmin compatibility issues with model column objects
-- Rely on search and sort for data management instead
+**Custom filters:**
+- Use `app/admin/filters.py` module for reusable filter base classes
+- `EnumFilterBase` automatically generates filter options from enum classes
+- Custom filters implement `lookups()` and `async get_filtered_query()` methods
+- Supports multiple filters combining with query parameters
 
 ### Package Exports
 - **Models/Services/Schemas**: Explicit imports + `__all__ = ["YourClass"]`
@@ -553,6 +602,15 @@ app/integrations/{service}/
 - Success operations: Log minimal essential information using f-string formatting
 - Error conditions: Always include full stack traces using `exc_info=True` parameter for root cause analysis
 - Embed contextual data directly in message strings rather than using logger's `extra` parameter (not visible in default formatters)
+
+**Task ID Context Pattern:**
+- Automatic task ID binding via Celery signals (`task_prerun`/`task_postrun`) in `app/core/celery.py`
+- Task ID stored in `ContextVar` from `app/core/task_context.py` (avoids circular imports)
+- Use `get_task_id()` helper in log messages: `logger.info(f"{get_task_id()}Processing...")`
+- Task ID prefix format: `[b83caca6] ` (first 8 characters)
+- No manual wrapping needed - signals automatically bind/unbind for every task
+- Simple string interpolation approach avoids complex formatter/filter setup
+- Benefits: Easy log correlation, debugging distributed task flows, production issue investigation
 
 **Error Handling:**
 - Re-raise exceptions after final retry attempt to expose full error context to calling code

@@ -1,8 +1,11 @@
 import inspect
+from pathlib import Path
 
+from jinja2 import ChoiceLoader, FileSystemLoader, PackageLoader
 from sqladmin import Admin, ModelView
 
 from app.admin import views
+from app.core.config import settings
 from app.core.database import sync_engine
 from app.extensions import load_extensions
 
@@ -14,7 +17,24 @@ def setup_admin(app) -> Admin:
         sync_engine,
         title="FastAPI Admin",
         base_url="/admin",
+        templates_dir="app/templates",
     )
+
+    # Configure Jinja2 to search extension templates before falling back to SQLAdmin defaults
+    # This allows extensions to override templates while keeping core clean
+    loaders = []
+
+    # Add extension template directories dynamically
+    for ext_name in settings.ENABLED_EXTENSIONS:
+        ext_template_dir = Path(f"app/extensions/{ext_name}/templates")
+        if ext_template_dir.exists():
+            loaders.append(FileSystemLoader(str(ext_template_dir)))
+
+    # Add core templates and SQLAdmin's built-in templates
+    loaders.append(FileSystemLoader("app/templates"))
+    loaders.append(PackageLoader("sqladmin", "templates"))
+
+    admin.templates.env.loader = ChoiceLoader(loaders)
 
     # Auto-register all ModelView subclasses from app.admin.views (core)
     for name, obj in inspect.getmembers(views, inspect.isclass):

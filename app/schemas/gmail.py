@@ -14,10 +14,12 @@ class EmailSearchRequest(BaseModel):
 
     # Common filters
     since_date: datetime | None = Field(
-        default=None, description="Filter emails since this date (inclusive)"
+        default=None,
+        description="Filter emails since this date (inclusive, entire day included)",
     )
     before_date: datetime | None = Field(
-        default=None, description="Filter emails before this date (exclusive)"
+        default=None,
+        description="Filter emails before this date (inclusive, entire day included)",
     )
     from_email: str | None = Field(
         default=None, description="Filter by sender email address"
@@ -28,13 +30,13 @@ class EmailSearchRequest(BaseModel):
     unread_only: bool = Field(default=False, description="Only return unread emails")
 
     # Advanced filter
-    raw_criteria: list[str] | None = Field(
+    raw_criteria: str | None = Field(
         default=None,
-        description="Raw IMAP search criteria (overrides other filters if provided)",
+        description="Raw IMAP search criteria string (overrides other filters if provided)",
         examples=[
-            ["UNSEEN"],
-            ["FROM", "john@example.com", "SINCE", "01-Oct-2024"],
-            ["LARGER", "1000000", "FLAGGED"],
+            "UNSEEN",
+            '(FROM "john@example.com" SINCE 01-Oct-2024)',
+            "(LARGER 1000000 FLAGGED)",
         ],
     )
 

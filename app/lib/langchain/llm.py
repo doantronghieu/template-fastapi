@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator
 
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseChatModel
+from pydantic import BaseModel
 
 from app.lib.llm.base import LLMProvider
 from app.lib.llm.config import InvocationMode, Model, ModelProvider
@@ -15,29 +16,41 @@ from app.lib.llm.config import InvocationMode, Model, ModelProvider
 class LangChainLLMProvider(LLMProvider):
     """LangChain implementation of the LLM provider protocol."""
 
-    def create_chat_model(
+    def create_model(
         self,
         model: Model | str,
         model_provider: ModelProvider | str | None = None,
         temperature: float = 0.0,
+        tools: list | None = None,
+        schema: type[BaseModel] | None = None,
         **kwargs,
     ) -> BaseChatModel:
-        """Create chat model instance using universal initialization.
+        """Create chat model instance with optional tools and structured output.
 
         Args:
             model: Model enum or string identifier
             model_provider: Provider enum/string (optional, can be inferred)
             temperature: Sampling temperature (0.0 to 1.0)
+            tools: Optional list of tools to bind to the model
+            schema: Optional Pydantic model class for structured output
             **kwargs: Additional model-specific parameters
 
         Returns:
             Configured chat model instance
 
-        Example:
+        Examples:
             >>> provider = LangChainLLMProvider()
-            >>> llm = provider.create_chat_model(Model.GPT_5_NANO, ModelProvider.OPENAI)
-            >>> response = llm.invoke("Hello!")
+            >>> # Basic model
+            >>> llm = provider.create_model(Model.GPT_5_NANO)
+            >>> # With tools
+            >>> llm = provider.create_model(Model.GPT_OSS_120B, tools=[calculator])
+            >>> # With structured output
+            >>> llm = provider.create_model(
+            ...     Model.GPT_OSS_120B,
+            ...     schema=BookingExtractionSchema
+            ... )
         """
+        # Extract enum values if needed
         model_value = model.value if isinstance(model, Model) else model
         provider_value = (
             model_provider.value
@@ -45,12 +58,29 @@ class LangChainLLMProvider(LLMProvider):
             else model_provider
         )
 
-        return init_chat_model(
+        # Create base model
+        chat_model: BaseChatModel = init_chat_model(
             model=model_value,
             model_provider=provider_value,
             temperature=temperature,
             **kwargs,
         )
+
+        # Apply tools if provided
+        if tools:
+            chat_model = chat_model.bind_tools(tools)
+
+        # Apply structured output if provided
+        if schema:
+            # Use function_calling method when tools are present for compatibility
+            if tools:
+                chat_model = chat_model.with_structured_output(
+                    schema, method="function_calling"
+                )
+            else:
+                chat_model = chat_model.with_structured_output(schema)
+
+        return chat_model
 
     async def invoke_model(
         self,

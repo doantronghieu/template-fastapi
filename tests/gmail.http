@@ -69,7 +69,7 @@ Content-Type: application/json
 X-API-Key: {{API_KEY}}
 
 {
-  "raw_criteria": ["LARGER", "1000000", "FLAGGED"],
+  "raw_criteria": "(LARGER 1000000 FLAGGED)",
   "limit": 10
 }
 
@@ -79,7 +79,7 @@ Content-Type: application/json
 X-API-Key: {{API_KEY}}
 
 {
-  "raw_criteria": ["SINCE", "01-Oct-2024", "FROM", "tpbank@tpb.com.vn"],
+  "raw_criteria": "(SINCE 01-Oct-2024 FROM \"tpbank@tpb.com.vn\")",
   "limit": 20
 }
 

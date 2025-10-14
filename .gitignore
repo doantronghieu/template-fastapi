@@ -45,3 +45,4 @@ client/
 **/hotel
 **/*.hotel
 **/.hotel.*
+**/.playwright-mcp
