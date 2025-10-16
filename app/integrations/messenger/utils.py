@@ -1,5 +1,50 @@
 """Message formatting utilities for storing rich messages as readable text."""
 
+from typing import Any
+
+
+def format_response_for_storage(response: Any) -> str:
+    """Format multi-message response for database storage.
+
+    Works with any response object that has a .messages attribute following
+    the MultiMessageResponseProtocol (duck typing).
+
+    Args:
+        response: Response object with .messages attribute containing message components
+
+    Returns:
+        Human-readable formatted string combining all messages
+
+    Example:
+        >>> response = AIResponse(messages=[...])
+        >>> formatted = format_response_for_storage(response)
+        "Hello! [Options: Location A, Location B]"
+    """
+    from app.integrations.messenger.types import MessageType
+
+    formatted_parts = []
+
+    for msg in response.messages:
+        if msg.type == MessageType.TEXT:
+            formatted_parts.append(msg.text)
+
+        elif msg.type == MessageType.QUICK_REPLY:
+            formatted = format_messenger_message(
+                message_type="quick_replies",
+                text=msg.text,
+                quick_replies=[{"title": qr.title} for qr in msg.quick_replies],
+            )
+            formatted_parts.append(formatted)
+
+        elif msg.type == MessageType.TEMPLATE:
+            formatted = format_messenger_message(
+                message_type="generic_template",
+                elements=[{"title": elem.title} for elem in msg.template_elements],
+            )
+            formatted_parts.append(formatted)
+
+    return "\n\n".join(formatted_parts)
+
 
 def format_messenger_message(
     message_type: str, text: str | None = None, **kwargs

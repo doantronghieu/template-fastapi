@@ -131,6 +131,51 @@ class MessagingService:
         )
         return result.scalar_one_or_none()
 
+    async def has_new_messages_since(
+        self,
+        channel_conversation_id: str,
+        since: datetime,
+        sender_role: MessageSenderRole | None = None,
+    ) -> bool:
+        """Check if new messages exist after a given timestamp.
+
+        Generic helper to detect message activity patterns:
+        - Interruption detection
+        - Activity monitoring
+        - Notification triggers
+
+        Args:
+            channel_conversation_id: External channel conversation ID (e.g., Facebook PSID)
+            since: Timestamp to check for messages after
+            sender_role: Optional filter by message sender (CLIENT, AI, ADMIN)
+
+        Returns:
+            True if at least one message exists after the timestamp
+
+        Example:
+            >>> # Check if user sent any message in last 5 minutes
+            >>> five_mins_ago = datetime.now(timezone.utc) - timedelta(minutes=5)
+            >>> has_activity = await messaging_service.has_new_messages_since(
+            ...     channel_conversation_id="123456",
+            ...     since=five_mins_ago,
+            ...     sender_role=MessageSenderRole.CLIENT
+            ... )
+        """
+        stmt = (
+            select(Message)
+            .join(Conversation)
+            .where(Conversation.channel_conversation_id == channel_conversation_id)
+            .where(Message.created_at > since)
+        )
+
+        # Optional filter by sender role
+        if sender_role:
+            stmt = stmt.where(Message.sender_role == sender_role)
+
+        stmt = stmt.limit(1)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none() is not None
+
     async def _create_user_with_channel(
         self, channel_id: str, channel_type: ChannelType
     ) -> User:

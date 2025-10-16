@@ -5,9 +5,11 @@ Background tasks handle async processing via async_to_sync bridge:
 - Processing includes: DB writes, LLM calls, API responses
 - Celery decouples webhook receipt from message processing
 - Uses asgiref.sync.async_to_sync with fresh engine per task
+- Uses channel message handler registry for extensible AI response generation
 """
 
 import logging
+from datetime import datetime, timezone
 
 from asgiref.sync import async_to_sync
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -16,9 +18,8 @@ from sqlalchemy.orm import sessionmaker
 from app.core.celery import celery_app
 from app.core.config import settings
 from app.integrations.messenger import MessengerClient
-from app.lib.llm.factory import get_llm_provider
 from app.models import ChannelType
-from app.services.llm_service import LLMService
+from app.services.handlers import channel_message_handler_registry
 
 logger = logging.getLogger(__name__)
 
@@ -71,9 +72,7 @@ def process_messenger_message(
 
         try:
             async with async_session_maker() as session:
-                # Initialize services (reuse all existing async code)
-                llm_provider = get_llm_provider()
-                llm_service = LLMService(session, llm_provider)
+                # Initialize messenger client
                 messenger_client = MessengerClient(
                     page_access_token=settings.FACEBOOK_PAGE_ACCESS_TOKEN,
                     app_secret=settings.FACEBOOK_APP_SECRET,
@@ -81,21 +80,50 @@ def process_messenger_message(
                 )
 
                 try:
+                    # Get appropriate channel message handler (extension or default)
+                    handler = channel_message_handler_registry.get_handler()
+
                     # Process: Save user msg → Generate AI response → Save AI msg
-                    ai_response = await llm_service.process_message_and_respond(
+                    # Handler now returns AIResponse (structured) instead of str
+                    ai_response = await handler.handle_message(
                         sender_id=sender_id,
                         message_content=message_content,
                         channel_type=ChannelType.MESSENGER,
                         channel_conversation_id=conversation_id,
+                        session=session,
                     )
 
-                    # Send AI response back to user via Facebook Send API
-                    result = await messenger_client.send_text_message(
-                        sender_id, ai_response
-                    )
-                    logger.info(
-                        f"Message sent: sender={sender_id} msg_id={result.get('message_id')}"
-                    )
+                    # Capture timestamp AFTER message processing completes
+                    # This ensures user's triggering message is already saved to DB
+                    # Only messages created AFTER this point are interruptions
+                    response_start_time = datetime.now(timezone.utc)
+
+                    # Send structured multi-message response
+                    from app.integrations.messenger import MessageSenderService
+
+                    # Check if response has .messages attribute (duck typing)
+                    if hasattr(ai_response, "messages"):
+                        # Use MessageSenderService for multi-message sending
+                        sender_service = MessageSenderService(session, messenger_client)
+                        send_stats = await sender_service.send_response(
+                            recipient_id=sender_id,
+                            response=ai_response,
+                            channel_conversation_id=conversation_id,
+                            response_start_time=response_start_time,
+                        )
+
+                        logger.info(
+                            f"Sent response: {send_stats['sent']}/{send_stats['total']} "
+                            f"(failed: {send_stats['failed']}, interrupted: {send_stats['interrupted']})"
+                        )
+                    else:
+                        # Fallback for string responses (backwards compatibility)
+                        result = await messenger_client.send_text_message(
+                            sender_id, ai_response
+                        )
+                        logger.info(
+                            f"Message sent: sender={sender_id} msg_id={result.get('message_id')}"
+                        )
 
                 except Exception:
                     logger.error(f"Task failed for sender {sender_id}", exc_info=True)

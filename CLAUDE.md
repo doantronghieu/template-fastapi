@@ -51,7 +51,7 @@ make dev                                      # Start FastAPI server at http://1
 - `make db-migrate message="description"` - Generate migration (auto-detects model changes)
 - `make db-upgrade` - Apply pending migrations to Supabase
 - `make db-downgrade` - Rollback last migration
-- `make db-reset` - Reset Supabase database to fresh state (⚠️ deletes all data)
+- `make db-reset` - Reset Supabase database to fresh state (⚠️ deletes all data, handles out-of-sync migrations)
 - `make db-seed` - Seed database with test data
 - Direct: `uv run alembic revision --autogenerate -m "message"` or `uv run alembic upgrade head`
 
@@ -296,6 +296,12 @@ Modular architecture for custom features without affecting core codebase.
 **Key Rules:**
 - Extensions → Core: ✅ | Core → Extensions: ❌ | Extension → Extension: ❌
 - Tables must be prefixed: `{extension_name}_tablename`
+
+### Custom Channel Message Handlers
+
+Extensions can provide custom AI response logic for channel messages (Messenger, WhatsApp, Telegram, etc.) without modifying core code. When an extension is enabled, its handler automatically processes all channel messages with custom prompts, business logic, and external integrations.
+
+**Full Documentation**: See `docs/MESSAGE_HANDLERS.md`
 
 ## Library Architecture Pattern
 

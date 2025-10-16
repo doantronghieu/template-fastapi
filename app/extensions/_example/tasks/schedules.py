@@ -41,10 +41,6 @@ Below are example schedules demonstrating different patterns. Uncomment and
 modify for your use case.
 """
 
-from celery.schedules import crontab
-
-from app.core.config import settings
-
 # Example schedules (commented out - modify for your use case)
 SCHEDULES = {
     # # Daily task at midnight

@@ -58,3 +58,24 @@ def setup_models() -> None:
     Models are auto-imported via models/__init__.py
     """
     from . import models  # noqa: F401
+
+
+def setup_message_handlers() -> None:
+    """Register custom channel message handlers for this extension (optional).
+
+    When this extension is enabled, all channel messages will automatically
+    use this extension's custom AI handler.
+
+    Example implementation:
+
+        from pathlib import Path
+        from app.services.handlers import channel_message_handler_registry
+        from .handlers.channel_message import MyExtensionChannelMessageHandler
+
+        extension_name = Path(__file__).parent.name
+        handler = MyExtensionChannelMessageHandler()
+        channel_message_handler_registry.register(extension_name, handler)
+
+    See app/extensions/hotel/handlers/channel_message.py for complete example.
+    """
+    pass  # Implement if extension needs custom channel message handling

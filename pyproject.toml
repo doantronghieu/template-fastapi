@@ -32,6 +32,10 @@ dependencies = [
     "html2text>=2025.4.15",
     "numexpr>=2.10.0",
     "asgiref>=3.10.0",
+    "langchain-google-genai>=2.1.12",
+    "pandas>=2.3.3",
+    "snowflake>=1.8.0",
+    "snowflake-sqlalchemy>=1.7.7",
 ]
 
 [project.optional-dependencies]

@@ -9,7 +9,7 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-ExtensionHook = Literal["api", "admin", "tasks", "models"]
+ExtensionHook = Literal["api", "admin", "tasks", "models", "message_handlers"]
 
 
 def get_extension_env_path(config_file_path: str) -> str:

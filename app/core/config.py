@@ -64,6 +64,9 @@ class Settings(BaseSettings):
         description="LLM provider (e.g., 'langchain', 'litellm')",
     )
 
+    # Google Generative AI
+    GOOGLE_API_KEY: str = Field(..., description="Google API key for Gemini models")
+
     # Facebook Messenger
     FACEBOOK_PAGE_ACCESS_TOKEN: str = Field(
         ..., description="Facebook Page Access Token for sending messages"

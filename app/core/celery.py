@@ -1,10 +1,20 @@
 import importlib
 import logging
+import sys
 
 from celery import Celery, signals
 
 from app.core.config import settings
 from app.core.task_context import task_id_var
+
+# Configure basic logging early for module-level initialization
+# This ensures logs during import are visible before Celery's logging setup
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(levelname)s/%(processName)s] %(message)s",
+    stream=sys.stderr,
+    force=True,  # Override any existing configuration
+)
 
 logger = logging.getLogger(__name__)
 
@@ -75,22 +85,34 @@ celery_app.conf.update(
     worker_max_tasks_per_child=settings.CELERY_WORKER_MAX_TASKS_PER_CHILD,
     # Redis Cloud free tier optimization (30 connection limit)
     # Target: <10 connections (~33% usage) to stay well below 80% alert threshold
-    # With concurrency=1 and pool=solo, minimal connections needed
-    broker_pool_limit=1,
-    redis_max_connections=5,
-    # Result backend connection pooling
+    # Connection budget breakdown (target: <10 total, ~33% usage):
+    #   - FastAPI Producer: 2 connections (1 broker + 1 result backend)
+    #   - Celery Worker: 3 connections (1 broker + 1 result + 1 worker pool)
+    #   - Celery Beat: 3 connections (1 broker + 1 Redbeat scheduler + 1 result)
+    #   - Flower: 2 connections (1 broker + 1 result for monitoring)
+    #   = ~10 connections total (leaves 20 connections buffer for spikes)
+    broker_pool_limit=1,  # Limit broker connection pool size per process
+    redis_max_connections=2,  # Max Redis connections per process (broker + result)
+    # Connection retry and resilience
+    broker_connection_retry=True,
+    broker_connection_retry_on_startup=True,
+    broker_connection_max_retries=10,
+    # Result backend connection pooling (minimal for producer)
     result_backend_transport_options={
-        "max_connections": 2,
+        "max_connections": 1,  # Single connection - producer rarely reads results
         "socket_keepalive": True,
         "socket_keepalive_options": {1: 1, 2: 1, 3: 3},
         "socket_connect_timeout": 5,
+        "health_check_interval": 30,  # Check connection health every 30s
     },
-    # Broker transport connection pooling
+    # Broker transport connection pooling (aggressive optimization for producer)
     broker_transport_options={
-        "max_connections": 2,
+        "max_connections": 1,  # Single connection - producer only sends tasks
         "socket_keepalive": True,
         "visibility_timeout": 1800,  # 30 minutes
         "socket_connect_timeout": 5,
+        "retry_on_timeout": True,
+        "health_check_interval": 30,  # Check connection health every 30s
     },
     # Beat schedule from extensions
     beat_schedule=load_extension_beat_schedules(),
@@ -100,6 +122,11 @@ celery_app.conf.update(
 from app.extensions import load_extensions  # noqa: E402
 
 load_extensions("tasks")
+
+# Initialize channel message handlers for Celery tasks
+from app.services.handlers import initialize_channel_message_handlers  # noqa: E402
+
+initialize_channel_message_handlers()
 
 
 # Automatic task ID binding via signals

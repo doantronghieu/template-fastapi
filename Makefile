@@ -6,7 +6,7 @@
 -include .env
 export
 
-.PHONY: help setup dev celery flower ngrok test lint format clean db-migrate db-upgrade db-downgrade db-reset db-seed infra-up infra-down infra-reset infra-logs app-build app-up app-down app-restart app-logs client-generate
+.PHONY: help setup dev celery celery-kill flower ngrok test lint format clean db-migrate db-upgrade db-downgrade db-reset db-seed infra-up infra-down infra-reset infra-logs app-build app-up app-down app-restart app-logs client-generate
 
 help:
 	@echo "FastAPI Template - Available Commands"
@@ -14,6 +14,7 @@ help:
 	@echo "  make setup           - Create venv and install dependencies"
 	@echo "  make dev             - Start development server (http://127.0.0.1:8000)"
 	@echo "  make celery          - Start Celery worker locally (without Docker)"
+	@echo "  make celery-kill     - Kill all Celery processes (local and Docker)"
 	@echo "  make flower          - Start Flower monitoring UI locally (http://127.0.0.1:5555)"
 	@echo "  make beat            - Start Celery Beat scheduler locally (without Docker)"
 	@echo "  make ngrok           - Start ngrok tunnel (reads PORT from .env)"
@@ -62,6 +63,13 @@ dev:
 celery:
 	uv run celery -A app.core.celery:celery_app worker --loglevel=info --concurrency=1 --pool=solo
 
+# Kill all Celery processes (local and Docker)
+# Use when switching between local and Docker celery workers
+celery-kill:
+	@pkill -9 -f "celery.*worker" 2>/dev/null || true
+	@docker stop celery-worker celery-beat 2>/dev/null || true
+	@echo "✓ All Celery processes stopped"
+
 # Start Flower monitoring UI locally (without Docker)
 # Dashboard: http://127.0.0.1:${FLOWER_PORT:-5555}
 flower:
@@ -94,6 +102,8 @@ ngrok:
 # Flower UI: http://127.0.0.1:5555
 # Note: Always rebuilds images before starting
 infra-up:
+	@echo "Merging environment files..."
+	@bash scripts/merge_env_files.sh
 	docker compose up -d --build celery-worker celery-beat flower
 
 # Stop and remove all containers
@@ -107,6 +117,8 @@ infra-down:
 infra-reset:
 	@echo "Destroying infrastructure and recreating..."
 	docker compose down -v
+	@echo "Merging environment files..."
+	@bash scripts/merge_env_files.sh
 	docker compose up -d --build celery-worker celery-beat flower
 	@echo "Waiting for services to be ready..."
 	@sleep 3
@@ -130,6 +142,8 @@ app-build:
 # Server: http://127.0.0.1:${PORT:-8000}
 # Note: Always rebuilds image before starting
 app-up:
+	@echo "Merging environment files..."
+	@bash scripts/merge_env_files.sh
 	docker compose up -d --build app
 
 # Stop FastAPI container
@@ -161,16 +175,17 @@ db-upgrade:
 db-downgrade:
 	uv run alembic downgrade -1
 
-# Reset database to fresh state (drops all tables via Alembic, then recreates)
+# Reset database to fresh state (drops all tables, then recreates via migrations)
 # WARNING: This will delete ALL data in the database!
+# Uses force drop to handle cases where alembic_version is out of sync
 db-reset:
 	@echo "⚠️  WARNING: This will delete ALL tables and data!"
 	@echo "Press Ctrl+C to cancel, or Enter to continue..."
 	@read confirm
-	@echo "Downgrading to base (removing all tables)..."
-	uv run alembic downgrade base
-	@echo "Upgrading to head (recreating all tables)..."
-	uv run alembic upgrade head
+	@echo "Force dropping all tables..."
+	@uv run python scripts/force_drop_all_tables.py --quiet
+	@echo "Recreating all tables from migrations..."
+	@uv run alembic upgrade head
 	@echo "✓ Database reset complete!"
 
 # Seed database with test data for development

@@ -41,7 +41,10 @@ class EnumFilterBase:
     enum_class: type[Enum]
 
     def lookups(
-        self, _request: Request, _model: Any, _run_arbitrary_query: Callable[[Select], Any]
+        self,
+        _request: Request,
+        _model: Any,
+        _run_arbitrary_query: Callable[[Select], Any],
     ) -> list[tuple[str, str]]:
         """Generate filter options from enum class.
 

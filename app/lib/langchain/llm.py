@@ -8,6 +8,7 @@ from collections.abc import AsyncIterator
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseChatModel
 from pydantic import BaseModel
+import httpx
 
 from app.lib.llm.base import LLMProvider
 from app.lib.llm.config import InvocationMode, Model, ModelProvider
@@ -58,11 +59,19 @@ class LangChainLLMProvider(LLMProvider):
             else model_provider
         )
 
-        # Create base model
+        # Create base model with httpx configuration for Celery compatibility
+        # Force connection close after each request to avoid event loop cleanup issues
+
+        http_client = httpx.AsyncClient(
+            limits=httpx.Limits(max_connections=1, max_keepalive_connections=0),
+            timeout=httpx.Timeout(60.0),
+        )
+
         chat_model: BaseChatModel = init_chat_model(
             model=model_value,
             model_provider=provider_value,
             temperature=temperature,
+            http_async_client=http_client,
             **kwargs,
         )
 
@@ -135,9 +144,7 @@ class LangChainLLMProvider(LLMProvider):
         if model is None:
             if model_name is None:
                 raise ValueError("Must provide either 'model' or 'model_name'")
-            model = self.create_chat_model(
-                model_name, model_provider, temperature, **kwargs
-            )
+            model = self.create_model(model_name, model_provider, temperature, **kwargs)
 
         # Convert string to enum if needed
         mode_enum = InvocationMode(mode) if isinstance(mode, str) else mode
