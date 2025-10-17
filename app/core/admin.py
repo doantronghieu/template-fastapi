@@ -1,3 +1,12 @@
+"""SQLAdmin Interface Configuration.
+
+Auto-discovers ModelView classes from app.admin.views and extension modules.
+Access at http://127.0.0.1:8000/admin (uses sync_engine).
+
+See docs/tech-stack.md for SQLAdmin auto-discovery and template loading details.
+See docs/guides/development.md for adding admin views.
+"""
+
 import inspect
 from pathlib import Path
 

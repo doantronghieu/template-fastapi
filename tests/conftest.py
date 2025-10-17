@@ -1,12 +1,10 @@
-"""Test fixtures for pytest-asyncio.
+"""Pytest Configuration and Fixtures.
 
-Provides:
-- test_engine: Session-scoped database engine
-- db_session: Function-scoped session with transaction rollback
-- client: Async HTTP client with dependency override
-- sync_client: Synchronous test client
+Provides test fixtures: test_engine, db_session, client, sync_client.
+Test database: {POSTGRES_DB}_test on Supabase with transaction rollback isolation.
 
-See tests/README.md for usage guide and examples.
+See docs/tech-stack.md for pytest configuration and fixture details.
+See tests/README.md for detailed usage guide and examples.
 """
 
 from collections.abc import AsyncGenerator

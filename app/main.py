@@ -1,3 +1,12 @@
+"""FastAPI Application Entry Point.
+
+Configures FastAPI with lifespan management, CORS, static files, API routes, and admin interface.
+OpenAPI documentation at /scalar with auto-discovered extension tags.
+
+See docs/tech-stack.md for FastAPI configuration details.
+See docs/architecture.md for application structure.
+"""
+
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv

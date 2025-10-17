@@ -1,3 +1,12 @@
+"""Celery Task Queue Configuration.
+
+Configures Celery with Redis Cloud broker/backend, Redbeat scheduler, and auto-discovery.
+Optimized for Redis Cloud free tier (30 connection limit, ~33% usage target).
+
+See docs/tech-stack.md for Celery configuration and connection optimization details.
+See docs/patterns/logging.md for task ID context pattern.
+"""
+
 import importlib
 import logging
 import sys

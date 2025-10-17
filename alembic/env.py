@@ -1,3 +1,12 @@
+"""Alembic Database Migration Environment.
+
+Auto-discovers models from app/models/*.py and extensions via glob pattern.
+Async-compatible with Supabase (statement_cache_size=0 for pgbouncer).
+
+See docs/tech-stack.md for Alembic configuration and migration workflow.
+See Makefile for migration commands (db-migrate, db-upgrade, db-downgrade).
+"""
+
 import asyncio
 from logging.config import fileConfig
 from pathlib import Path
@@ -14,6 +23,7 @@ load_dotenv()
 from app.core.config import settings  # noqa: E402
 
 # Auto-import all models from app/models/ for Alembic autogenerate
+# Add new model file → migrations automatically detect it
 models_path = Path(__file__).parent.parent / "app" / "models"
 for model_file in models_path.glob("*.py"):
     if model_file.name != "__init__.py":

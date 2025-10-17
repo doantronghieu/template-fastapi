@@ -1,3 +1,12 @@
+"""Database Layer Configuration.
+
+Dual-engine setup: async (asyncpg) for FastAPI endpoints, sync (psycopg2) for SQLAdmin.
+Supabase-compatible with pgbouncer Session Pooler (statement_cache_size=0).
+
+See docs/tech-stack.md for database configuration details.
+See docs/architecture.md for session management and model patterns.
+"""
+
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -5,22 +14,23 @@ from sqlmodel import SQLModel
 
 from app.core.config import settings
 
-# Create async engine for FastAPI endpoints
+# Async engine for FastAPI endpoints (asyncpg driver)
+# Supabase compatibility: Disable prepared statement cache for pgbouncer Session Pooler
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.DATABASE_ECHO,
     future=True,
-    # Disable prepared statement cache for Supabase poolers (pgbouncer compatibility)
     connect_args={"statement_cache_size": 0},
 )
 
-# Create sync engine for SQLAlchemy Admin
+# Sync engine for SQLAdmin interface (psycopg2 driver)
 sync_engine = create_engine(
     settings.SYNC_DATABASE_URL,
     echo=settings.DATABASE_ECHO,
 )
 
-# Create async session factory
+# Async session factory with expire_on_commit=False
+# Inject via SessionDep from app.core.dependencies
 async_session_maker = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
