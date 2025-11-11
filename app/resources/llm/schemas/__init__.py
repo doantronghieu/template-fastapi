@@ -1,4 +1,6 @@
-"""Core JSON schemas for LLM structured outputs and function calling.
+"""LLM structured output schemas.
+
+This module contains both Pydantic models and JSON schemas for LLM structured outputs.
 
 Store as .json files.
 
