@@ -117,4 +117,8 @@ async def get_user_conversations(
 ):
     """Get all conversations for a user with message counts."""
     conversations = await service.get_user_conversations(user_id)
-    return {"conversations": conversations}
+    return ConversationListResponse(
+        conversations=conversations,
+        next_cursor=None,
+        has_more=False,
+    )

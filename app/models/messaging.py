@@ -6,7 +6,7 @@ from uuid import UUID
 from sqlalchemy import CheckConstraint, Column, String
 from sqlmodel import Field, Relationship, SQLModel
 
-from .base import timestamp_field, uuid_fk, uuid_pk
+from .base import BaseTable, uuid_fk
 
 if TYPE_CHECKING:
     from .user import User
@@ -21,7 +21,7 @@ class MessageSenderRole(str, Enum):
 
 
 class ConversationBase(SQLModel):
-    """Base conversation fields with descriptions."""
+    """Base conversation fields for schemas."""
 
     title: str | None = Field(
         default=None,
@@ -40,30 +40,8 @@ class ConversationBase(SQLModel):
     )
 
 
-class Conversation(ConversationBase, table=True):
-    """Conversation model for tracking user conversations."""
-
-    __tablename__ = "conversations"
-
-    id: UUID = uuid_pk()
-    created_at: datetime = timestamp_field()
-    updated_at: datetime = timestamp_field()
-    ai_summary_updated_at: datetime | None = Field(
-        default=None, description="Timestamp when AI summary was last generated"
-    )
-
-    user_id: UUID = uuid_fk("users")
-    channel_conversation_id: str | None = Field(
-        default=None, index=True, unique=True, max_length=255
-    )  # Override to add index and unique constraint
-
-    # Relationships
-    messages: list["Message"] = Relationship(back_populates="conversation")
-    user: "User" = Relationship(back_populates="conversations")
-
-
 class MessageBase(SQLModel):
-    """Base message fields with descriptions."""
+    """Base message fields for schemas."""
 
     sender_role: MessageSenderRole = Field(
         description="Who sent the message: client, ai, or admin"
@@ -71,7 +49,32 @@ class MessageBase(SQLModel):
     content: str = Field(max_length=10000, description="Message text content")
 
 
-class Message(MessageBase, table=True):
+class Conversation(ConversationBase, BaseTable, table=True):
+    """Conversation model for tracking user conversations."""
+
+    __tablename__ = "conversations"
+
+    # Override channel_conversation_id to add index and unique constraint
+    channel_conversation_id: str | None = Field(
+        default=None,
+        index=True,
+        unique=True,
+        max_length=255,
+        description="External channel conversation ID (Telegram chat ID, WhatsApp thread, etc.)",
+    )
+
+    # Table-specific fields not in ConversationBase
+    ai_summary_updated_at: datetime | None = Field(
+        default=None, description="Timestamp when AI summary was last generated"
+    )
+    user_id: UUID = uuid_fk("users")
+
+    # Relationships
+    messages: list["Message"] = Relationship(back_populates="conversation")
+    user: "User" = Relationship(back_populates="conversations")
+
+
+class Message(MessageBase, BaseTable, table=True):
     """Message model for conversation messages."""
 
     __tablename__ = "messages"
@@ -82,15 +85,15 @@ class Message(MessageBase, table=True):
         ),
     )
 
-    id: UUID = uuid_pk()
-    created_at: datetime = timestamp_field()
-    updated_at: datetime = timestamp_field()
-
+    # Table-specific fields not in MessageBase
     conversation_id: UUID = uuid_fk("conversations")
     user_id: UUID = uuid_fk("users")
+
+    # Override sender_role to add sa_column for enum handling
     sender_role: MessageSenderRole = Field(
-        sa_column=Column(String(50), nullable=False)
-    )  # Override to add sa_column
+        sa_column=Column(String(50), nullable=False),
+        description="Who sent the message: client, ai, or admin",
+    )
 
     # Relationships
     conversation: Conversation = Relationship(back_populates="messages")

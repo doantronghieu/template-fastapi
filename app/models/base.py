@@ -1,11 +1,11 @@
 """Base model utilities for common patterns."""
 
 from datetime import UTC, datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from sqlalchemy import Column, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
-from sqlmodel import Field
+from sqlmodel import Field, SQLModel
 
 
 def uuid_pk() -> Field:
@@ -50,4 +50,22 @@ def uuid_fk(table: str, *, nullable: bool = False, index: bool = True) -> Field:
             nullable=nullable,
             index=index,
         ),
+    )
+
+
+class BaseTable(SQLModel):
+    """Base model with UUID primary key and timestamps."""
+
+    id: UUID = Field(
+        default_factory=uuid4,
+        primary_key=True,
+        sa_type=PGUUID(as_uuid=True),
+    )
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_type=DateTime(timezone=True),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_type=DateTime(timezone=True),
     )

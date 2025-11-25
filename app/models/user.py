@@ -1,13 +1,12 @@
-from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import CheckConstraint, Column, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship
 
-from .base import timestamp_field, uuid_fk, uuid_pk
+from .base import BaseTable, uuid_fk
 
 if TYPE_CHECKING:
     from .messaging import Conversation, Message
@@ -34,7 +33,7 @@ class UserRole(str, Enum):
     AI = "ai"
 
 
-class UserChannel(SQLModel, table=True):
+class UserChannel(BaseTable, table=True):
     """User channel model for mapping external channel IDs to users."""
 
     __tablename__ = "user_channels"
@@ -45,10 +44,6 @@ class UserChannel(SQLModel, table=True):
             name="valid_channel_type",
         ),
     )
-
-    id: UUID = uuid_pk()
-    created_at: datetime = timestamp_field()
-    updated_at: datetime = timestamp_field()
 
     user_id: UUID = uuid_fk("users")
     channel_id: str = Field(
@@ -68,7 +63,7 @@ class UserChannel(SQLModel, table=True):
     user: "User" = Relationship(back_populates="channels")
 
 
-class User(SQLModel, table=True):
+class User(BaseTable, table=True):
     """User model with role-based access."""
 
     __tablename__ = "users"
@@ -78,10 +73,6 @@ class User(SQLModel, table=True):
             name="valid_user_role",
         ),
     )
-
-    id: UUID = uuid_pk()
-    created_at: datetime = timestamp_field()
-    updated_at: datetime = timestamp_field()
 
     email: str | None = Field(
         default=None,

@@ -1,6 +1,6 @@
 """Models for database tables."""
 
-from .base import timestamp_field, uuid_fk, uuid_pk
+from .base import BaseTable, timestamp_field, uuid_fk, uuid_pk
 from .example import Example
 from .messaging import (
     Conversation,
@@ -12,6 +12,7 @@ from .messaging import (
 from .user import ChannelType, User, UserChannel, UserRole
 
 __all__ = [
+    "BaseTable",
     "ChannelType",
     "Conversation",
     "ConversationBase",
