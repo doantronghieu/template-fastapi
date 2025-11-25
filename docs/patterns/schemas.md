@@ -43,6 +43,12 @@ This document describes patterns for organizing and implementing schemas and mod
   - Used only by request/response schemas, never by table models
   - Group related optional parameters (e.g., external channel fields, internal UUID fields)
 
+## BaseTable Pattern for Common Metadata
+
+**Principle**: Centralize common columns/metadata in `BaseTable` to eliminate repetition.
+
+**Pattern**: Use multiple inheritance with order `DomainBase, BaseTable, table=True`. Domain base provides business fields, BaseTable provides common metadata, concrete model defines table-specific configuration. Example: `class Entity(EntityBase, BaseTable, table=True)`
+
 ## Multiple Inheritance for Schema Composition
 
 **Principle**: Compose schemas from multiple base classes (similar to Zod's `.merge()` or TypeScript intersection types).
