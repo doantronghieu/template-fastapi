@@ -34,6 +34,7 @@ This document describes common development workflows and coding patterns.
 - Add provider function returning service instance
 - Create type alias: `YourServiceDep = Annotated[YourService, Depends(get_your_service)]`
 - Export in `__init__.py`: `from .your_service import YourService, YourServiceDep, get_service` + `__all__` list
+- **Type hints**: Use `Annotated[Type, "description"]` when parameter needs concise comment for comprehension. Keep self-explanatory parameters clean. Docstrings stay clean - just function purpose and return if needed.
 
 ## Adding New API Endpoint
 - Create `APIRouter` in `app/api/your_endpoints.py` with route handlers
