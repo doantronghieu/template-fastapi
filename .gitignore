@@ -46,3 +46,6 @@ client/
 **/*.hotel
 **/.hotel.*
 **/.playwright-mcp
+
+# Remove in others
+alembic/versions
