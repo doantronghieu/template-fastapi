@@ -30,7 +30,7 @@ import os
 os.environ.setdefault("ENABLED_EXTENSIONS", "_example")
 
 from app.core.config import settings  # noqa: E402
-from app.core.dependencies import get_session  # noqa: E402
+from app.dependencies import get_session  # noqa: E402
 from app.main import app  # noqa: E402
 
 # Test database URL - automatically uses {POSTGRES_DB}_test

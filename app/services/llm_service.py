@@ -16,7 +16,7 @@ from typing import Annotated
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import SessionDep
+from app.dependencies import SessionDep
 from app.lib.llm import InvocationMode, LLMProviderDep
 from app.lib.llm.base import LLMProvider
 from app.lib.llm.config import Model, ModelProvider

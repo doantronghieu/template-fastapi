@@ -12,7 +12,7 @@ from typing import Annotated, Any, Protocol
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import SessionDep
+from app.dependencies import SessionDep
 from app.integrations.messenger.client import MessengerClient
 from app.integrations.messenger.dependencies import get_messenger_client
 from app.integrations.messenger.formatters import (

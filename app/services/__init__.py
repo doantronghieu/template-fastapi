@@ -1,5 +1,6 @@
 """Service layer for business logic."""
 
+from .base_crud import BaseCRUDService, PaginatedResponse, PaginationType
 from .example_service import ExampleService, ExampleServiceDep, get_example_service
 from .llm_service import LLMService, LLMServiceDep, get_llm_service
 from .messaging_service import (
@@ -10,6 +11,9 @@ from .messaging_service import (
 from .user_service import UserService, UserServiceDep, get_user_service
 
 __all__ = [
+    "BaseCRUDService",
+    "PaginatedResponse",
+    "PaginationType",
     "ExampleService",
     "ExampleServiceDep",
     "LLMService",

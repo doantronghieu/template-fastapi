@@ -6,7 +6,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from app.core.dependencies import SessionDep
+from app.dependencies import SessionDep
 from app.extensions._example.config import extension_settings
 from app.extensions._example.models import ExampleFeature
 from app.extensions._example.schemas.feature import (

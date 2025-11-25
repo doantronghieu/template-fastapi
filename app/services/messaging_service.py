@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.dependencies import SessionDep
+from app.dependencies import SessionDep
 from app.models import (
     ChannelType,
     Conversation,

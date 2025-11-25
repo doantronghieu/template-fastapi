@@ -11,7 +11,7 @@ from typing import Annotated
 import redis.asyncio as redis
 from fastapi import Depends
 
-from app.core.dependencies import RedisDep
+from app.dependencies import RedisDep
 
 logger = logging.getLogger(__name__)
 

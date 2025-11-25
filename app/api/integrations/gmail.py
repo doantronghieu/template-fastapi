@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, Query
 
-from app.core.dependencies import verify_api_key
+from app.dependencies import verify_api_key
 from app.integrations.gmail import GmailClientDep
 from app.schemas.gmail import EmailListResponse, EmailResponse, EmailSearchRequest
 from app.services.gmail_service import GmailServiceDep
