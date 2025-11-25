@@ -1,11 +1,36 @@
-"""User response schemas."""
+"""User request and response schemas."""
 
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
+# Request schemas
+class UserBase(BaseModel):
+    """Base schema with common user field definitions."""
+
+    email: str | None = Field(None, description="User email address")
+    name: str = Field(..., min_length=1, max_length=255, description="User display name")
+    role: str = Field(..., description="User role: admin, employee, client, or ai")
+    profile: dict = Field(default_factory=dict, description="Additional user profile data")
+
+
+class UserCreate(UserBase):
+    """Schema for creating a new user."""
+    pass
+
+
+class UserUpdate(BaseModel):
+    """Schema for updating an existing user (partial update)."""
+
+    email: str | None = None
+    name: str | None = Field(None, min_length=1, max_length=255)
+    role: str | None = None
+    profile: dict | None = None
+
+
+# Response schemas
 class UserChannelResponse(BaseModel):
     """User channel information."""
 
