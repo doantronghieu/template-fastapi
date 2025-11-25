@@ -13,7 +13,7 @@ This document describes the application structure and component organization.
 - `app/api/tasks.py` - Celery task trigger and status endpoints
 - `app/core/config.py` - Settings using Pydantic BaseSettings
 - `app/core/database.py` - Async engine, sync engine, session factory, init_db()
-- `app/core/dependencies.py` - Centralized DI providers with type aliases
+- `app/dependencies/` - Dependency injection providers organized by layer
 - `app/core/openapi_tags.py` - Type-safe tag registry for API documentation
 - `app/core/templates.py` - Jinja2Templates instance with directory configuration
 - `app/core/admin.py` - SQLAdmin configuration with auto-discovery
@@ -57,11 +57,12 @@ Dual engine setup (async for FastAPI, sync for SQLAdmin) with Supabase PostgreSQ
 Type alias pattern for clean endpoint signatures: `ServiceDep = Annotated[Service, Depends(get_service)]`
 
 **Organization**:
-- Core dependencies: `app/core/dependencies.py` (sessions, settings)
-- Service layer: `app/services/*.py` (business logic with auto-discovery)
-- Library dependencies: `app/lib/{library}/dependencies.py` (co-located)
+- `app/dependencies/core.py` - Core infrastructure (DB sessions, Redis, settings)
+- `app/dependencies/api.py` - API-layer dependencies
+- `app/services/*.py` - Service layer with business logic (auto-discovery)
+- `app/lib/{library}/dependencies.py` - Library-specific dependencies (co-located)
 
-**Pattern**: Inject via type aliases → `async def endpoint(service: ServiceDep)`
+**Pattern**: Inject via type aliases → `async def endpoint(service: ServiceDep, pagination: PaginationParams)`
 
 ## Alembic Migrations
 

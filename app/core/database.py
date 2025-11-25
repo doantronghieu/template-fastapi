@@ -30,7 +30,7 @@ sync_engine = create_engine(
 )
 
 # Async session factory with expire_on_commit=False
-# Inject via SessionDep from app.core.dependencies
+# Inject via SessionDep from app.dependencies
 async_session_maker = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 

@@ -40,7 +40,7 @@ Complete guide to the technologies used in this project.
 ### Session Management
 
 - `async_session_maker`: Session factory with `expire_on_commit=False`
-- Injection: Use `SessionDep` type alias from `app.core.dependencies`
+- Injection: Use `SessionDep` type alias from `app.dependencies`
 - Pattern: `async def endpoint(session: SessionDep)` for clean signatures
 
 ### Models

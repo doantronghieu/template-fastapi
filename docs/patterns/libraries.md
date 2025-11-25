@@ -44,7 +44,7 @@ Avoid deep nesting (`app/lib/ai/llm/`) - use flat structure with clear capabilit
 - Ensures consistency, prevents typos, validates at startup
 
 **Dependency injection:**
-- Co-locate: library deps in `app/lib/{library}/dependencies.py`, core deps in `app/core/dependencies.py`
+- Co-locate: library deps in `app/lib/{library}/dependencies.py`, core deps in `app/dependencies/`
 - Pattern: provider function returns instance, type alias for injection via `Annotated[Type, Depends(fn)]`
 - Use `TYPE_CHECKING` guard to avoid circular imports
 - Inject in endpoints via type alias parameter for clean signatures
