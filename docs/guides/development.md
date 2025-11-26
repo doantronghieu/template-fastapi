@@ -4,9 +4,9 @@ This document describes common development workflows and coding patterns.
 
 ## Type Hints & Documentation
 
-**Principle**: Use `Annotated[Type, "description"]` when a parameter needs a concise comment for comprehension. Keep self-explanatory parameters clean. Docstrings stay minimal - just function purpose and return value if needed.
+**Principle**: Replace docstring parameter descriptions with `Annotated[Type, "description"]`. Self-explanatory parameters stay clean. Docstrings describe only function purpose—no param/return lists.
 
-**Applies to**: Input/output parameter definitions of all methods and functions.
+**Applies to**: Input parameters. Returns use standard type hints.
 
 ## File Naming Conventions
 
