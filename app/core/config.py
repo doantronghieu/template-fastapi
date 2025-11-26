@@ -67,32 +67,31 @@ class Settings(BaseSettings):
     # Google Generative AI
     GOOGLE_API_KEY: str = Field(..., description="Google API key for Gemini models")
 
-    # Facebook Messenger
-    FACEBOOK_PAGE_ACCESS_TOKEN: str = Field(
-        ..., description="Facebook Page Access Token for sending messages"
-    )
-    FACEBOOK_VERIFY_TOKEN: str = Field(
-        ..., description="Custom token for webhook verification"
-    )
-    FACEBOOK_APP_SECRET: str = Field(
-        ..., description="Facebook App Secret for signature verification"
-    )
-    FACEBOOK_GRAPH_API_VERSION: str = Field(
-        default="v24.0", description="Facebook Graph API version (default: v24.0)"
-    )
-    FACEBOOK_RATE_LIMIT_MESSAGES_PER_MINUTE: int = Field(
-        default=10, description="Max messages per minute per user"
-    )
-
     # Extensions
     ENABLED_EXTENSIONS: str | list[str] = Field(
         default="",
         description="Comma-separated extensions (e.g., 'ext_a,ext_b') or empty for core only",
     )
 
+    # Integrations
+    ENABLED_INTEGRATIONS: str | list[str] = Field(
+        default="",
+        description="Comma-separated integrations (e.g., 'int_a,int_b') or empty for none",
+    )
+
     @field_validator("ENABLED_EXTENSIONS", mode="before")
     @classmethod
     def parse_extensions(cls, v):
+        """Parse comma-separated string to list."""
+        if isinstance(v, str):
+            if not v.strip():
+                return []
+            return [x.strip() for x in v.split(",") if x.strip()]
+        return v or []
+
+    @field_validator("ENABLED_INTEGRATIONS", mode="before")
+    @classmethod
+    def parse_integrations(cls, v):
         """Parse comma-separated string to list."""
         if isinstance(v, str):
             if not v.strip():

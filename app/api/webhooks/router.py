@@ -2,9 +2,9 @@
 
 from fastapi import APIRouter
 
-from . import messenger
+from app.integrations import load_integrations
 
 webhook_router = APIRouter()
 
-# Register webhook endpoints
-webhook_router.include_router(messenger.router, prefix="/messenger")
+# Load enabled integrations via hook system
+load_integrations("webhooks", webhook_router)

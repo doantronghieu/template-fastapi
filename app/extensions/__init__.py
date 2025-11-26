@@ -15,23 +15,23 @@ ExtensionHook = Literal["api", "admin", "tasks", "models", "message_handlers"]
 def get_extension_env_path(config_file_path: str) -> str:
     """Get extension .env file path without generating it.
 
-    Pattern: .env.[extension_folder_name]
-    Example: app/extensions/_example -> .env._example
+    Pattern: envs/extensions/[extension_name].env
+    Example: app/extensions/_example -> envs/extensions/_example.env
 
     Args:
         config_file_path: Pass __file__ from the config.py module
 
     Returns:
-        Path to the .env file in project root
+        Path to the .env file in envs/extensions/
     """
     # Get extension folder name from config file path
-    extension_folder = Path(config_file_path).parent.name
+    extension_name = Path(config_file_path).parent.name
 
     # Project root (3 levels up: config.py -> extension -> extensions -> app -> root)
     project_root = Path(config_file_path).parent.parent.parent.parent
 
-    # .env file path
-    env_file = project_root / f".env.{extension_folder}"
+    # .env file path in centralized envs directory
+    env_file = project_root / "envs" / "extensions" / f"{extension_name}.env"
 
     return str(env_file)
 
@@ -51,15 +51,18 @@ def generate_extension_env(config_file_path: str, settings_class: type) -> None:
         ...     API_KEY: str = Field(default="", description="API key")
         >>> generate_extension_env(__file__, MySettings)
     """
-    # Get extension folder name
-    extension_folder = Path(config_file_path).parent.name
+    # Get extension name
+    extension_name = Path(config_file_path).parent.name
 
     # Get .env file path
     env_file = Path(get_extension_env_path(config_file_path))
 
+    # Create envs/extensions directory if doesn't exist
+    env_file.parent.mkdir(parents=True, exist_ok=True)
+
     # Auto-generate if doesn't exist
     if not env_file.exists():
-        lines = [f"# {extension_folder.upper()} Extension Configuration", ""]
+        lines = [f"# {extension_name.upper()} Extension Configuration", ""]
 
         # Introspect Settings class fields
         if hasattr(settings_class, "model_fields"):
@@ -73,7 +76,7 @@ def generate_extension_env(config_file_path: str, settings_class: type) -> None:
                 lines.append("")
 
         env_file.write_text("\n".join(lines))
-        logger.info(f"✓ Auto-generated {env_file.name}")
+        logger.info(f"✓ Auto-generated {env_file}")
 
 
 def load_extensions(hook: ExtensionHook, *args, **kwargs) -> None:
