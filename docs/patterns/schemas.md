@@ -29,6 +29,28 @@ This document describes patterns for organizing and implementing schemas and mod
 
 **Pattern**: Clients use TypedDict for external API calls, endpoints use Pydantic for request validation.
 
+## Type Hints & Field Documentation
+
+**Principle**: Replace docstring parameter descriptions with inline type annotations. Docstrings describe only function/class purpose—no param/return lists.
+
+**TypedDict fields**: Use `Annotated[Type, "description"]` for field-level documentation. Provides context without runtime overhead.
+
+```python
+Id: Annotated[str, "Record ID"]
+```
+
+**Pydantic fields**: Use `Field(description="...")` for field documentation. Descriptions appear in OpenAPI/Swagger docs automatically.
+
+```python
+id: str = Field(alias="Id", description="Record ID")
+```
+
+**Guidelines**:
+- Document non-obvious fields
+- Skip documentation for self-explanatory fields 
+- Keep descriptions concise but still informative
+- For Pydantic, combine with other Field parameters
+
 ## SQLModel Base Pattern ("Fat Models")
 
 **Principle**: Single source of truth for field definitions with descriptions in base classes.
