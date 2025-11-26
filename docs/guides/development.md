@@ -2,6 +2,12 @@
 
 This document describes common development workflows and coding patterns.
 
+## Type Hints & Documentation
+
+**Principle**: Use `Annotated[Type, "description"]` when a parameter needs a concise comment for comprehension. Keep self-explanatory parameters clean. Docstrings stay minimal - just function purpose and return value if needed.
+
+**Applies to**: Input/output parameter definitions of all methods and functions.
+
 ## File Naming Conventions
 
 **Principle**: Name related files using consistent prefixes for discoverability and maintainability.
@@ -34,7 +40,6 @@ This document describes common development workflows and coding patterns.
 - Add provider function returning service instance
 - Create type alias: `YourServiceDep = Annotated[YourService, Depends(get_your_service)]`
 - Export in `__init__.py`: `from .your_service import YourService, YourServiceDep, get_service` + `__all__` list
-- **Type hints**: Use `Annotated[Type, "description"]` when parameter needs concise comment for comprehension. Keep self-explanatory parameters clean. Docstrings stay clean - just function purpose and return if needed.
 
 ## Adding New API Endpoint
 - Create `APIRouter` in `app/api/your_endpoints.py` with route handlers
