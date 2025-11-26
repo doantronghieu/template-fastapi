@@ -9,7 +9,8 @@ from zoneinfo import ZoneInfo
 
 from fastapi import Depends
 
-from app.integrations.gmail import GmailClient, GmailClientDep
+from ..client import GmailClient
+from ..dependencies import GmailClientDep
 
 
 class GmailService:

@@ -3,9 +3,10 @@
 from fastapi import APIRouter, Depends, Query
 
 from app.dependencies import verify_api_key
-from app.integrations.gmail import GmailClientDep
-from app.schemas.gmail import EmailListResponse, EmailResponse, EmailSearchRequest
-from app.services.gmail_service import GmailServiceDep
+
+from .dependencies import GmailClientDep
+from .schemas import EmailListResponse, EmailResponse, EmailSearchRequest
+from .services.gmail_service import GmailServiceDep
 
 router = APIRouter(dependencies=[Depends(verify_api_key)])
 

@@ -10,7 +10,7 @@ import logging
 from datetime import datetime, timedelta
 
 from .types import EmailMessage
-from .utils import parse_email_message
+from .utils.email_parser import parse_email_message
 
 logger = logging.getLogger(__name__)
 

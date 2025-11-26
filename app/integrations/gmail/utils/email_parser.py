@@ -7,7 +7,7 @@ from email.utils import parseaddr
 
 import html2text
 
-from .types import EmailAddress, EmailMessage
+from ..types import EmailAddress, EmailMessage
 
 
 def _decode_header_value(header_value: str | None) -> str:
