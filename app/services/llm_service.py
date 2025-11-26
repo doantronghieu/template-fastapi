@@ -12,6 +12,7 @@ through channel-agnostic message handling.
 
 import logging
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -57,27 +58,14 @@ class LLMService:
         self.messaging_service = MessagingService(session)
 
     async def _get_conversation_history(
-        self, conversation_id, limit: int = 50
+        self, conversation_id: UUID, limit: int = 50
     ) -> list[dict]:
         """
         Retrieve latest N messages from conversation history formatted for LLM.
 
-        Args:
-            conversation_id: Conversation UUID
-            limit: Maximum number of messages to retrieve (default: 50)
-
-        Returns:
-            List of messages in chronological order (oldest to newest)
-            Format: [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
-
-        Implementation Detail:
-            Fetches LATEST 50 messages using DESC order (newest first from DB),
-            then reverses to chronological ASC (oldest first for LLM context).
-            This ensures LLM receives most recent conversation context.
-
-        Why Latest 50:
-            Provides sufficient context while staying within LLM token limits.
-            Older messages beyond 50 are excluded to prevent context overflow.
+        Fetches LATEST messages using DESC order (newest first from DB),
+        then reverses to chronological ASC (oldest first for LLM context).
+        Limit of 50 provides sufficient context while staying within token limits.
         """
         _, messages, _ = await self.messaging_service.get_conversation_messages(
             conversation_id=conversation_id,
@@ -98,34 +86,13 @@ class LLMService:
         ]
 
     @async_retry(max_retries=3, exceptions=(Exception,))
-    async def generate_response(self, conversation_id) -> str:
+    async def generate_response(self, conversation_id: UUID) -> str:
         """
         Generate AI response based on conversation history with automatic retry.
 
-        Args:
-            conversation_id: Conversation UUID for context
-
-        Returns:
-            str: Generated AI response text
-
-        Raises:
-            Exception: Re-raised on final retry failure with full stack trace
-
-        Flow:
-            1. Fetch conversation history (includes latest user message)
-            2. Format as plain string with XML-like sections
-            3. Invoke LLM with exponential backoff retry
-            4. Return generated response
-
-        Prompt Format:
-            Uses plain string (not message list) with sections:
-            - <SYSTEM>: AI behavior instructions
-            - <HISTORY>: Previous conversation (excluding current query)
-            - <CURRENT_USER_QUERY>: Latest user message
-
-        Note:
-            Automatically retries with exponential backoff on any exception.
-            Plain string format used instead of message list for model compatibility.
+        Fetches history, formats as XML-like prompt (<SYSTEM>, <HISTORY>, <CURRENT_USER_QUERY>),
+        and invokes LLM. Plain string format used for model compatibility.
+        Retries with exponential backoff on failure.
         """
         # Get conversation history (includes latest user message from DB)
         history = await self._get_conversation_history(conversation_id)
@@ -163,35 +130,17 @@ Please respond to the user's current query based on the conversation history and
 
     async def process_message_and_respond(
         self,
-        sender_id: str,
+        sender_id: Annotated[str, "Channel-specific user ID (e.g., PSID for Messenger)"],
         message_content: str,
         channel_type: ChannelType,
-        channel_conversation_id: str,
+        channel_conversation_id: Annotated[str, "Channel's conversation identifier"],
     ) -> str:
         """
         Process incoming message, save to DB, generate and save AI response.
 
-        Complete message processing flow:
-            1. Save user message to database
-               - Auto-creates user if first message
-               - Auto-creates conversation if needed
-            2. Generate AI response using conversation history
-            3. Save AI response to database
-            4. Return AI response text (for sending via channel)
-
-        Args:
-            sender_id: Channel-specific user ID (e.g., PSID for Messenger)
-            message_content: User's message text
-            channel_type: Source channel (MESSENGER, WHATSAPP, etc.)
-            channel_conversation_id: Channel's conversation identifier
-
-        Returns:
-            str: Generated AI response text ready for sending
-
-        Note:
-            This is the main entry point for message processing.
-            All persistence and AI generation happens here before
-            response is sent back via channel client.
+        Main entry point for message processing. Saves user message (auto-creates
+        user/conversation if first interaction), generates AI response from history,
+        persists AI response, and returns text for sending via channel.
         """
         # Save user message (auto-creates user/conversation if first interaction)
         user_message = await self.messaging_service.create_message(
@@ -222,16 +171,7 @@ Please respond to the user's current query based on the conversation history and
 async def get_llm_service(
     session: SessionDep, llm_provider: LLMProviderDep
 ) -> LLMService:
-    """
-    Provide LLMService instance with database and LLM provider dependencies.
-
-    Args:
-        session: Async database session for message persistence
-        llm_provider: LLM provider (e.g., LangChain, LiteLLM)
-
-    Returns:
-        LLMService: Initialized service instance
-    """
+    """Provide LLMService instance with injected dependencies."""
     return LLMService(session, llm_provider)
 
 
