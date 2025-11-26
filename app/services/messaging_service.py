@@ -592,44 +592,75 @@ class MessagingService:
         user_id: UUID,
     ) -> list[dict]:
         """
-        Get all conversations for a user with message counts.
+        Get all conversations for a user with full details.
 
         Args:
             user_id: User UUID
 
         Returns:
-            List of conversation dicts with message_count field
+            List of conversation dicts
         """
-        # Query conversations with message count
+        # Query with eager loading for user and messages
         query = (
-            select(
-                Conversation,
-                func.count(Message.id).label("message_count"),
+            select(Conversation)
+            .options(
+                selectinload(Conversation.user).selectinload(User.channels),
+                selectinload(Conversation.messages).load_only(
+                    Message.content,
+                    Message.created_at,
+                    Message.sender_role,
+                ),
             )
-            .outerjoin(Message, Message.conversation_id == Conversation.id)
             .where(Conversation.user_id == user_id)
-            .group_by(Conversation.id)
             .order_by(Conversation.updated_at.desc())
         )
 
         result = await self.session.execute(query)
-        rows = result.all()
+        conversations: list[Conversation] = list(result.scalars().all())
 
-        # Format response
-        conversations = []
-        for conversation, message_count in rows:
-            conversations.append(
+        # Format response with eagerly loaded data
+        formatted_conversations = []
+        for conv in conversations:
+            # Get last message from eagerly loaded messages
+            last_message = (
+                max(conv.messages, key=lambda m: m.created_at)
+                if conv.messages
+                else None
+            )
+
+            # Get primary channel from eagerly loaded user channels
+            user_channels = sorted(
+                conv.user.channels, key=lambda c: c.is_primary, reverse=True
+            )
+            user_channel = user_channels[0] if user_channels else None
+
+            formatted_conversations.append(
                 {
-                    "id": conversation.id,
-                    "created_at": conversation.created_at,
-                    "updated_at": conversation.updated_at,
-                    "title": conversation.title,
-                    "channel_conversation_id": conversation.channel_conversation_id,
-                    "message_count": message_count,
+                    "id": conv.id,
+                    "title": conv.title,
+                    "created_at": conv.created_at,
+                    "updated_at": conv.updated_at,
+                    "ai_summary": conv.ai_summary,
+                    "ai_summary_updated_at": conv.ai_summary_updated_at,
+                    "user": {
+                        "id": conv.user.id,
+                        "name": conv.user.name,
+                        "role": conv.user.role,
+                    },
+                    "channel_type": user_channel.channel_type if user_channel else None,
+                    "last_message": (
+                        {
+                            "content": last_message.content,
+                            "created_at": last_message.created_at,
+                            "sender_role": serialize_enum(last_message.sender_role),
+                        }
+                        if last_message
+                        else None
+                    ),
                 }
             )
 
-        return conversations
+        return formatted_conversations
 
 
 # Dependency provider
