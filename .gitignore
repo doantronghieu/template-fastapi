@@ -29,6 +29,9 @@ htmlcov/
 .env.local
 .env.*
 !.env.*.example
+envs/**
+!envs/**/
+!envs/**/*.example.env
 
 # Local HTTP test files
 *.local.http
