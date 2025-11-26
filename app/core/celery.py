@@ -132,10 +132,11 @@ from app.extensions import load_extensions  # noqa: E402
 
 load_extensions("tasks")
 
-# Initialize channel message handlers for Celery tasks
-from app.services.handlers import initialize_channel_message_handlers  # noqa: E402
+# Initialize channel message handlers
+if "messenger" in settings.ENABLED_INTEGRATIONS:
+    from app.services.handlers import initialize_channel_message_handlers  # noqa: E402
 
-initialize_channel_message_handlers()
+    initialize_channel_message_handlers()
 
 
 # Automatic task ID binding via signals

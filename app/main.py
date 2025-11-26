@@ -30,7 +30,6 @@ from app.core.openapi_tags import (  # noqa: E402
     get_tag_groups_from_routes,
 )
 from app.core.templates import BASE_DIR  # noqa: E402
-from app.services.handlers import initialize_channel_message_handlers  # noqa: E402
 
 
 @asynccontextmanager
@@ -40,9 +39,6 @@ async def lifespan(app: FastAPI):
 
     # Startup: Initialize database tables
     await init_db()
-
-    # Initialize channel message handlers
-    initialize_channel_message_handlers()
 
     yield
     # Shutdown: cleanup if needed
