@@ -4,22 +4,21 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from app.core.config import settings
-
 from .client import MessengerClient
+from .config import messenger_settings
 
 
 def get_messenger_client() -> MessengerClient:
     """
-    Provide MessengerClient instance configured from environment settings.
+    Provide MessengerClient instance
 
     Returns:
-        MessengerClient: Initialized client with credentials from .env
+        MessengerClient: Initialized client with credentials from messenger settings
     """
     return MessengerClient(
-        page_access_token=settings.FACEBOOK_PAGE_ACCESS_TOKEN,
-        app_secret=settings.FACEBOOK_APP_SECRET,
-        graph_api_version=settings.FACEBOOK_GRAPH_API_VERSION,
+        page_access_token=messenger_settings.FACEBOOK_PAGE_ACCESS_TOKEN,
+        app_secret=messenger_settings.FACEBOOK_APP_SECRET,
+        graph_api_version=messenger_settings.FACEBOOK_GRAPH_API_VERSION,
     )
 
 

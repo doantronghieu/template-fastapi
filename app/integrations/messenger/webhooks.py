@@ -8,14 +8,12 @@ import logging
 
 from fastapi import APIRouter, Header, HTTPException, Query, Request
 
-from app.core.config import settings
-from app.integrations.messenger import (
-    MessengerClientDep,
-    format_messenger_message,
-    parse_webhook_payload,
-)
 from app.services.rate_limiter import RateLimiterDep
 from app.tasks.channel_tasks import process_messenger_message
+
+from .config import messenger_settings
+from .dependencies import MessengerClientDep
+from .utils.webhook_parser import format_messenger_message, parse_webhook_payload
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -44,7 +42,7 @@ async def verify_webhook(
     Raises:
         HTTPException: 403 if verification token doesn't match
     """
-    if mode == "subscribe" and token == settings.FACEBOOK_VERIFY_TOKEN:
+    if mode == "subscribe" and token == messenger_settings.FACEBOOK_VERIFY_TOKEN:
         return int(challenge)
 
     logger.warning(f"Webhook verify failed: mode={mode}")
@@ -106,7 +104,7 @@ async def receive_webhook(
 
         # Rate limiting: Prevent spam/abuse (sliding window via Redis)
         within_limit = await rate_limiter.check_rate_limit(
-            sender_id, settings.FACEBOOK_RATE_LIMIT_MESSAGES_PER_MINUTE
+            sender_id, messenger_settings.FACEBOOK_RATE_LIMIT_MESSAGES_PER_MINUTE
         )
 
         if not within_limit:

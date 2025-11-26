@@ -4,8 +4,8 @@ import logging
 
 from fastapi import APIRouter
 
-from app.integrations.messenger import MessengerClientDep
-from app.schemas.messenger import (
+from .dependencies import MessengerClientDep
+from .schemas import (
     SendGenericTemplateRequest,
     SendMessageRequest,
     SendMessageResponse,

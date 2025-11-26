@@ -13,15 +13,13 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import SessionDep
-from app.integrations.messenger.client import MessengerClient
-from app.integrations.messenger.dependencies import get_messenger_client
-from app.integrations.messenger.formatters import (
-    format_quick_replies,
-    format_template_elements,
-)
-from app.integrations.messenger.types import MessageType
 from app.models import MessageSenderRole
 from app.services.messaging_service import MessagingService
+
+from ..client import MessengerClient
+from ..dependencies import get_messenger_client
+from ..types import MessageType
+from ..utils.formatters import format_quick_replies, format_template_elements
 
 logger = logging.getLogger(__name__)
 
