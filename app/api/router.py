@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api import examples, health, lib, messaging, tasks, users
+from app.api import documents, examples, health, lib, messaging, tasks, users
 from app.api.integrations.router import integration_router
 from app.api.webhooks.router import webhook_router
 from app.core.openapi_tags import APITag
@@ -14,6 +14,7 @@ api_router.include_router(examples.router, tags=[APITag.EXAMPLES])
 api_router.include_router(messaging.router, tags=[APITag.MESSAGING])
 api_router.include_router(tasks.router, prefix="/tasks", tags=[APITag.TASKS])
 api_router.include_router(users.router, prefix="/users", tags=[APITag.USERS])
+api_router.include_router(documents.router, tags=[APITag.DOCUMENTS])
 api_router.include_router(lib.router, prefix="/lib")
 
 # Integration routes (tags applied at integration router level)

@@ -30,6 +30,7 @@ class APITag(str, Enum):
     TASKS = "Tasks"
     USERS = "Users"
     WEBHOOKS = "Webhooks"
+    DOCUMENTS = "Documents"
 
     # Lib tags
     LLM = "LLM"
@@ -65,6 +66,10 @@ TAG_METADATA: dict[APITag, dict] = {
     },
     APITag.WEBHOOKS: {
         "description": "Webhook endpoints for external integrations",
+        "group": TagGroup.CORE,
+    },
+    APITag.DOCUMENTS: {
+        "description": "Document conversion to markdown",
         "group": TagGroup.CORE,
     },
     # Integration
