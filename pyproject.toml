@@ -50,6 +50,7 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "app"]
+pythonpath = ["."]
 asyncio_mode = "auto"
 markers = [
     "integration: marks tests that require external services (celery worker, etc.)",

@@ -12,12 +12,7 @@ uv run pytest -s                                       # Show prints
 
 ## Configuration
 
-**pyproject.toml:**
-```toml
-[tool.pytest.ini_options]
-testpaths = ["tests", "app"]  # Discovers tests in tests/ and app/*/tests/
-asyncio_mode = "auto"  # Auto-detect async tests, no decorators needed
-```
+**pyproject.toml**
 
 **Test Database:**
 - Name: `{POSTGRES_DB}_test` (e.g., `postgres_test` on Supabase)
@@ -90,7 +85,7 @@ async def test_endpoint(client: AsyncClient):
 
 ```
 tests/                              # Core application tests
-├── conftest.py                     # Fixtures
+├── conftest.py                     # Fixtures (db_session, client, sync_client)
 ├── test_*.py                       # Test modules (one per API module or model)
 └── README.md                       # This file
 
@@ -98,13 +93,16 @@ app/integrations/*/tests/           # Integration-specific tests (co-located)
 ├── conftest.py                     # Integration-specific fixtures
 └── test_*.py                       # Integration tests
 
-app/extensions/*/tests/bruno/       # Bruno API test collections
+app/extensions/*/tests/             # Extension tests (co-located)
+├── conftest.py                     # Extension-specific fixtures
+├── test_*.py                       # Pytest tests
+└── bruno/                          # Bruno API test collections
 ```
 
 **Conventions:**
 - Files: `test_*.py`
 - Functions: `test_*()` or `async def test_*()`
-- Core tests in `tests/`, integration tests co-located in `app/integrations/*/tests/`
+- Core tests in `tests/`, co-located tests in `app/integrations/*/tests/` and `app/extensions/*/tests/`
 - Group related tests together
 
 ## Debugging

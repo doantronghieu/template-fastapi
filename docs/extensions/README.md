@@ -40,7 +40,7 @@ make db-upgrade
 
 ```bash
 # Run extension tests
-pytest tests/extensions/my_extension/
+pytest app/extensions/my_extension/tests/
 ```
 
 ---
@@ -204,9 +204,10 @@ ENABLED_EXTENSIONS=extension_a,extension_b,extension_c
 - See `docs/patterns/testing.md` for Bruno conventions
 
 ### PyTest Integration Tests
-- Add `test_api.py`, `test_models.py`, `test_services.py`, `test_tasks.py` as needed
+- Add `test_api.py`, `test_models.py`, `test_services.py`, `test_tasks.py` in `app/extensions/{extension_name}/tests/`
+- Add `conftest.py` with extension-specific fixtures (e.g., `with_example_extension`)
 - Use `async def` for all test functions with AsyncClient
-- Extension enabled in `tests/conftest.py` via `os.environ.setdefault("ENABLED_EXTENSIONS", "_example")`
+- Template available: `app/extensions/_example/tests/`
 
 ---
 
