@@ -1,0 +1,53 @@
+meta {
+  name: Carousel - 5 elements
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/integrations/messenger/send-generic-template
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "recipient_id": "{{recipientId}}",
+    "elements": [
+      {
+        "title": "Paris, France",
+        "subtitle": "The City of Light - From $899",
+        "image_url": "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=500&h=500&fit=crop",
+        "buttons": [{"type": "postback", "title": "Book Trip", "payload": "BOOK_DESTINATION_PARIS"}]
+      },
+      {
+        "title": "Tokyo, Japan",
+        "subtitle": "Modern meets traditional - From $1,299",
+        "image_url": "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=500&h=500&fit=crop",
+        "buttons": [{"type": "postback", "title": "Book Trip", "payload": "BOOK_DESTINATION_TOKYO"}]
+      },
+      {
+        "title": "Bali, Indonesia",
+        "subtitle": "Tropical paradise - From $799",
+        "image_url": "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=500&h=500&fit=crop",
+        "buttons": [{"type": "postback", "title": "Book Trip", "payload": "BOOK_DESTINATION_BALI"}]
+      },
+      {
+        "title": "New York, USA",
+        "subtitle": "The city that never sleeps - From $699",
+        "image_url": "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=500&h=500&fit=crop",
+        "buttons": [{"type": "postback", "title": "Book Trip", "payload": "BOOK_DESTINATION_NYC"}]
+      },
+      {
+        "title": "London, UK",
+        "subtitle": "Historic and modern - From $799",
+        "image_url": "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=500&h=500&fit=crop",
+        "buttons": [{"type": "postback", "title": "Book Trip", "payload": "BOOK_DESTINATION_LONDON"}]
+      }
+    ]
+  }
+}

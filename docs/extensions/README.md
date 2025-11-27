@@ -202,18 +202,17 @@ ENABLED_EXTENSIONS=extension_a,extension_b,extension_c
 ## Testing
 
 ### Test Structure
-- Create `tests/extensions/{extension_name}/` directory for REST Client test files
-- Add `.http` files for manual API testing (e.g., `pms.http`, `features.http`)
-- Template available: `tests/extensions/_example/features.http`
-- Use REST Client extension in VS Code for in-editor HTTP requests
+- Create `tests/extensions/{extension_name}/bruno/` directory for Bruno API test collections
+- Add `.bru` files for manual API testing (one request per file)
+- Template available: `tests/extensions/_example/bruno/`
+- Use [Bruno](https://www.usebruno.com/) for API testing (git-friendly, offline-first)
 
-### REST Client Tests
-```http
-### Variables
-@baseUrl = http://localhost:8000
-
-### Test endpoint
-GET {{baseUrl}}/api/extensions/my_extension/endpoint
+### Bruno Collection Structure
+```
+PATH/bruno/
+├── bruno.json           # Collection metadata
+├── collection.bru       # Shared variables
+└── get-features.bru     # Individual request files
 ```
 
 ### PyTest Integration Tests

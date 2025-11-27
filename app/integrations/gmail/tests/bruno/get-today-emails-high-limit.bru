@@ -1,0 +1,15 @@
+meta {
+  name: Get today's emails (high limit)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{apiPath}}/today?limit=100
+  body: none
+  auth: none
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}

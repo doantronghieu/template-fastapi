@@ -1,0 +1,6 @@
+{
+  "version": "1",
+  "name": "Example Extension API",
+  "type": "collection",
+  "ignore": ["node_modules", ".git"]
+}

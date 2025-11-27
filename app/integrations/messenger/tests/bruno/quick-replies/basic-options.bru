@@ -1,0 +1,39 @@
+meta {
+  name: Quick Replies - Basic (3 options)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/integrations/messenger/send-quick-replies
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "recipient_id": "{{recipientId}}",
+    "text": "What's your favorite color?",
+    "quick_replies": [
+      {
+        "content_type": "text",
+        "title": "Red",
+        "payload": "COLOR_RED"
+      },
+      {
+        "content_type": "text",
+        "title": "Blue",
+        "payload": "COLOR_BLUE"
+      },
+      {
+        "content_type": "text",
+        "title": "Green",
+        "payload": "COLOR_GREEN"
+      }
+    ]
+  }
+}

@@ -1,0 +1,45 @@
+meta {
+  name: Single Card - Maximum 3 buttons
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/integrations/messenger/send-generic-template
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "recipient_id": "{{recipientId}}",
+    "elements": [
+      {
+        "title": "Tech Conference 2024",
+        "subtitle": "Join 5000+ developers - Dec 15-17 - San Francisco",
+        "image_url": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&h=500&fit=crop",
+        "buttons": [
+          {
+            "type": "web_url",
+            "title": "Event Details",
+            "url": "https://www.example.com/events/tech-conf-2024"
+          },
+          {
+            "type": "postback",
+            "title": "Register",
+            "payload": "REGISTER_EVENT_TECHCONF2024"
+          },
+          {
+            "type": "postback",
+            "title": "Share",
+            "payload": "SHARE_EVENT_TECHCONF2024"
+          }
+        ]
+      }
+    ]
+  }
+}

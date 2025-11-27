@@ -1,0 +1,29 @@
+meta {
+  name: Quick Replies - User Email
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/integrations/messenger/send-quick-replies
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "recipient_id": "{{recipientId}}",
+    "text": "Please share your email to receive updates:",
+    "quick_replies": [
+      {
+        "content_type": "user_email",
+        "title": "",
+        "payload": ""
+      }
+    ]
+  }
+}

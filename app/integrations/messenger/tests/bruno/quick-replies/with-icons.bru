@@ -1,0 +1,42 @@
+meta {
+  name: Quick Replies - With Icons
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/integrations/messenger/send-quick-replies
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "recipient_id": "{{recipientId}}",
+    "text": "How was your experience?",
+    "quick_replies": [
+      {
+        "content_type": "text",
+        "title": "Excellent",
+        "payload": "RATING_5",
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Gold_Star.svg/100px-Gold_Star.svg.png"
+      },
+      {
+        "content_type": "text",
+        "title": "Good",
+        "payload": "RATING_4",
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Gold_Star.svg/100px-Gold_Star.svg.png"
+      },
+      {
+        "content_type": "text",
+        "title": "Poor",
+        "payload": "RATING_2",
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Gold_Star.svg/100px-Gold_Star.svg.png"
+      }
+    ]
+  }
+}

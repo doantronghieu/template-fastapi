@@ -1,0 +1,24 @@
+meta {
+  name: Search by date range
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{apiPath}}/search
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-API-Key: {{apiKey}}
+}
+
+body:json {
+  {
+    "since_date": "2024-10-01T00:00:00Z",
+    "before_date": "2024-10-13T23:59:59Z",
+    "limit": 20
+  }
+}

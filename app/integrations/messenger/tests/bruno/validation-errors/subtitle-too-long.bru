@@ -1,0 +1,31 @@
+meta {
+  name: ERROR - Element subtitle too long (81 > 80 max)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/integrations/messenger/send-generic-template
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+docs {
+  Expected: 422 Validation Error
+}
+
+body:json {
+  {
+    "recipient_id": "{{recipientId}}",
+    "elements": [
+      {
+        "title": "Test Product",
+        "subtitle": "12345678901234567890123456789012345678901234567890123456789012345678901234567890X"
+      }
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+meta {
+  name: Search unread emails
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{apiPath}}/search
+  body: json
+  auth: none
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "unread_only": true,
+    "limit": 10
+  }
+}

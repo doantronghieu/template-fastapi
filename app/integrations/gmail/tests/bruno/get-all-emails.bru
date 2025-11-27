@@ -1,0 +1,22 @@
+meta {
+  name: Get all emails (default limit)
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{apiPath}}/search
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-API-Key: {{apiKey}}
+}
+
+body:json {
+  {
+    "limit": 50
+  }
+}

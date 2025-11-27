@@ -1,0 +1,42 @@
+meta {
+  name: ERROR - Too many quick replies (14 > 13 max)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/integrations/messenger/send-quick-replies
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+docs {
+  Expected: 422 Validation Error
+}
+
+body:json {
+  {
+    "recipient_id": "{{recipientId}}",
+    "text": "This should fail - too many quick replies:",
+    "quick_replies": [
+      {"content_type": "text", "title": "1", "payload": "1"},
+      {"content_type": "text", "title": "2", "payload": "2"},
+      {"content_type": "text", "title": "3", "payload": "3"},
+      {"content_type": "text", "title": "4", "payload": "4"},
+      {"content_type": "text", "title": "5", "payload": "5"},
+      {"content_type": "text", "title": "6", "payload": "6"},
+      {"content_type": "text", "title": "7", "payload": "7"},
+      {"content_type": "text", "title": "8", "payload": "8"},
+      {"content_type": "text", "title": "9", "payload": "9"},
+      {"content_type": "text", "title": "10", "payload": "10"},
+      {"content_type": "text", "title": "11", "payload": "11"},
+      {"content_type": "text", "title": "12", "payload": "12"},
+      {"content_type": "text", "title": "13", "payload": "13"},
+      {"content_type": "text", "title": "14", "payload": "14"}
+    ]
+  }
+}

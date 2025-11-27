@@ -1,0 +1,31 @@
+meta {
+  name: ERROR - Title-only element (missing required fields)
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/integrations/messenger/send-generic-template
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+docs {
+  Expected: 422 Validation Error
+  Facebook requires at least one of: subtitle, image_url, or buttons
+}
+
+body:json {
+  {
+    "recipient_id": "{{recipientId}}",
+    "elements": [
+      {
+        "title": "Title Only - Invalid"
+      }
+    ]
+  }
+}

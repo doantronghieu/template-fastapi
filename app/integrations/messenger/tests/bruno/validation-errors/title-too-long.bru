@@ -1,0 +1,33 @@
+meta {
+  name: ERROR - Quick reply title too long (21 > 20 max)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/integrations/messenger/send-quick-replies
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+docs {
+  Expected: 422 Validation Error
+}
+
+body:json {
+  {
+    "recipient_id": "{{recipientId}}",
+    "text": "This should fail - title too long:",
+    "quick_replies": [
+      {
+        "content_type": "text",
+        "title": "123456789012345678901",
+        "payload": "TEST"
+      }
+    ]
+  }
+}
