@@ -15,7 +15,7 @@ uv run pytest -s                                       # Show prints
 **pyproject.toml:**
 ```toml
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "app"]  # Discovers tests in tests/ and app/*/tests/
 asyncio_mode = "auto"  # Auto-detect async tests, no decorators needed
 ```
 
@@ -89,16 +89,22 @@ async def test_endpoint(client: AsyncClient):
 ## Test Organization
 
 ```
-tests/
-├── conftest.py       # Fixtures
-├── test_*.py         # Test modules (one per API module or model)
-└── README.md         # This file
+tests/                              # Core application tests
+├── conftest.py                     # Fixtures
+├── test_*.py                       # Test modules (one per API module or model)
+└── README.md                       # This file
+
+app/integrations/*/tests/           # Integration-specific tests (co-located)
+├── conftest.py                     # Integration-specific fixtures
+└── test_*.py                       # Integration tests
+
+app/extensions/*/tests/bruno/       # Bruno API test collections
 ```
 
 **Conventions:**
 - Files: `test_*.py`
 - Functions: `test_*()` or `async def test_*()`
-- One test file per API module or model
+- Core tests in `tests/`, integration tests co-located in `app/integrations/*/tests/`
 - Group related tests together
 
 ## Debugging
