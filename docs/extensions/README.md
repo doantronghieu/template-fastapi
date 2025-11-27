@@ -39,9 +39,6 @@ make db-upgrade
 ### 4. Run Tests
 
 ```bash
-# Copy test template
-cp -r tests/extensions/_example tests/extensions/my_extension
-
 # Run extension tests
 pytest tests/extensions/my_extension/
 ```
@@ -202,18 +199,9 @@ ENABLED_EXTENSIONS=extension_a,extension_b,extension_c
 ## Testing
 
 ### Test Structure
-- Create `tests/extensions/{extension_name}/bruno/` directory for Bruno API test collections
-- Add `.bru` files for manual API testing (one request per file)
-- Template available: `tests/extensions/_example/bruno/`
-- Use [Bruno](https://www.usebruno.com/) for API testing (git-friendly, offline-first)
-
-### Bruno Collection Structure
-```
-PATH/bruno/
-├── bruno.json           # Collection metadata
-├── collection.bru       # Shared variables
-└── get-features.bru     # Individual request files
-```
+- Create `app/extensions/{extension_name}/tests/bruno/` for Bruno API test collections
+- Template available: `app/extensions/_example/tests/bruno/`
+- See `docs/patterns/testing.md` for Bruno conventions
 
 ### PyTest Integration Tests
 - Add `test_api.py`, `test_models.py`, `test_services.py`, `test_tasks.py` as needed
