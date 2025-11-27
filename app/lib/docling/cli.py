@@ -2,12 +2,12 @@
 """CLI tool for testing Docling document conversion.
 
 Usage:
-    uv run python -m tests.test_docling_cli <file_path> [--mode local|remote] [--ocr]
+    uv run python -m app.lib.docling.cli <file_path> [--mode local|remote] [--ocr]
 
 Examples:
-    uv run python -m tests.test_docling_cli tmp/data/document.pdf
-    uv run python -m tests.test_docling_cli tmp/data/document.pdf --mode remote
-    uv run python -m tests.test_docling_cli tmp/data/scanned.pdf --mode local --ocr
+    uv run python -m app.lib.docling.cli tmp/data/document.pdf
+    uv run python -m app.lib.docling.cli tmp/data/document.pdf --mode remote
+    uv run python -m app.lib.docling.cli tmp/data/scanned.pdf --mode local --ocr
 """
 
 import argparse
