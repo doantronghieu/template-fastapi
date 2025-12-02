@@ -108,7 +108,7 @@ class BaseCRUDService(Generic[ModelType]):
         self,
         order_by: Annotated[
             str | list[str] | None,
-            "Column(s) to order by. Prefix with '-' for DESC (e.g., '-created_at')"
+            "Column(s) to order by. Prefix with '-' for DESC (e.g., '-created_at')",
         ] = None,
         include_deleted: bool = False,
     ) -> list[ModelType]:
@@ -131,16 +131,15 @@ class BaseCRUDService(Generic[ModelType]):
         offset: int = 0,
         cursor: Annotated[str | None, "Cursor value (ID) for keyset pagination"] = None,
         pagination_type: Annotated[
-            PaginationType,
-            "OFFSET for limit/offset, CURSOR for keyset pagination"
+            PaginationType, "OFFSET for limit/offset, CURSOR for keyset pagination"
         ] = PaginationType.OFFSET,
         order_by: Annotated[
             str | list[str] | None,
-            "Column(s) to order by. Prefix with '-' for DESC (e.g., '-created_at')"
+            "Column(s) to order by. Prefix with '-' for DESC (e.g., '-created_at')",
         ] = None,
         filters: Annotated[
             dict[str, Any] | None,
-            "Field filters with operators (e.g., {'email__ilike': '%@example.com', 'age__gt': 18})"
+            "Field filters with operators (e.g., {'email__ilike': '%@example.com', 'age__gt': 18})",
         ] = None,
         include_deleted: bool = False,
     ) -> PaginatedResponse:
@@ -181,7 +180,7 @@ class BaseCRUDService(Generic[ModelType]):
         self,
         filters: Annotated[
             dict[str, Any],
-            "Field filters with operators (e.g., {'email': 'user@example.com'}, {'age__gt': 18})"
+            "Field filters with operators (e.g., {'email': 'user@example.com'}, {'age__gt': 18})",
         ],
         include_deleted: bool = False,
     ) -> ModelType | None:
@@ -197,7 +196,9 @@ class BaseCRUDService(Generic[ModelType]):
 
     async def create(
         self,
-        obj_in: Annotated[BaseModel | dict[str, Any], "Pydantic model or dict with field values"]
+        obj_in: Annotated[
+            BaseModel | dict[str, Any], "Pydantic model or dict with field values"
+        ],
     ) -> ModelType:
         """Create new record with auto-commit and refresh."""
         data = self._to_dict(obj_in)
@@ -211,7 +212,9 @@ class BaseCRUDService(Generic[ModelType]):
     async def update(
         self,
         id: Any,
-        obj_in: Annotated[BaseModel | dict[str, Any], "Pydantic model or dict with fields to update"],
+        obj_in: Annotated[
+            BaseModel | dict[str, Any], "Pydantic model or dict with fields to update"
+        ],
     ) -> ModelType:
         """Update existing record with partial update (PATCH semantics). Raises 404 if not found."""
         instance = await self.get_by_id(id)
@@ -249,8 +252,8 @@ class BaseCRUDService(Generic[ModelType]):
         self,
         objs_in: Annotated[
             list[BaseModel | dict[str, Any]],
-            "List of Pydantic models or dicts with field values"
-        ]
+            "List of Pydantic models or dicts with field values",
+        ],
     ) -> list[ModelType]:
         """Bulk create multiple records in single transaction."""
         instances = [self.model(**self._to_dict(obj_in)) for obj_in in objs_in]

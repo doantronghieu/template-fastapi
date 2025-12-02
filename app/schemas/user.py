@@ -11,13 +11,18 @@ class UserBase(BaseModel):
     """Base schema with common user field definitions."""
 
     email: str | None = Field(None, description="User email address")
-    name: str = Field(..., min_length=1, max_length=255, description="User display name")
+    name: str = Field(
+        ..., min_length=1, max_length=255, description="User display name"
+    )
     role: str = Field(..., description="User role: admin, employee, client, or ai")
-    profile: dict = Field(default_factory=dict, description="Additional user profile data")
+    profile: dict = Field(
+        default_factory=dict, description="Additional user profile data"
+    )
 
 
 class UserCreate(UserBase):
     """Schema for creating a new user."""
+
     pass
 
 

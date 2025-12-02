@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from sqlmodel import SQLModel
 
 from fastapi import Depends, HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload

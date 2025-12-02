@@ -114,9 +114,7 @@ def load_integrations(hook: IntegrationHook, *args, **kwargs) -> None:
 
             if setup_func and callable(setup_func):
                 setup_func(*args, **kwargs)
-                logger.info(
-                    f"✓ Loaded integration '{integration_name}' hook '{hook}'"
-                )
+                logger.info(f"✓ Loaded integration '{integration_name}' hook '{hook}'")
             else:
                 logger.debug(f"Integration '{integration_name}' has no '{hook}' hook")
 

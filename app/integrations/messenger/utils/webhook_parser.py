@@ -1,5 +1,4 @@
-"""Webhook payload parsing and message formatting utilities for Facebook Messenger.
-"""
+"""Webhook payload parsing and message formatting utilities for Facebook Messenger."""
 
 import logging
 from typing import Any

@@ -12,7 +12,9 @@ class PaginationParams:
         self,
         limit: int | None = Query(None, ge=1, le=100, description="Max items per page"),
         offset: int | None = Query(None, ge=0, description="Number of items to skip"),
-        cursor: str | None = Query(None, description="Cursor for cursor-based pagination"),
+        cursor: str | None = Query(
+            None, description="Cursor for cursor-based pagination"
+        ),
         pagination_type: PaginationType | None = Query(
             None, description="Pagination strategy: offset or cursor"
         ),

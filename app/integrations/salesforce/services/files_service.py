@@ -36,7 +36,9 @@ class FilesService:
             return f"{title}.{ext}"
         return title
 
-    def list_files_in_library(self, library_name: Annotated[str, "Content Library name"]) -> list[FileInfo]:
+    def list_files_in_library(
+        self, library_name: Annotated[str, "Content Library name"]
+    ) -> list[FileInfo]:
         """List all files in a Content Library."""
         library_id = self._get_library_id(library_name)
         if not library_id:
@@ -59,7 +61,9 @@ class FilesService:
                 file_extension=record["ContentDocument"].get("FileExtension"),
                 content_size=record["ContentDocument"].get("ContentSize"),
                 created_date=record["ContentDocument"]["CreatedDate"],
-                latest_version_id=record["ContentDocument"].get("LatestPublishedVersionId"),
+                latest_version_id=record["ContentDocument"].get(
+                    "LatestPublishedVersionId"
+                ),
             )
             for record in result["records"]
         ]

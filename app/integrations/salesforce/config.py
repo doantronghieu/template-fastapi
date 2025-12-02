@@ -14,9 +14,7 @@ class SalesforceSettings(BaseSettings):
     SALESFORCE_DOMAIN: str = Field(
         description="Salesforce domain (e.g., 'company.my' for company.my.salesforce.com)"
     )
-    SALESFORCE_CONSUMER_KEY: str = Field(
-        description="Consumer Key from Connected App"
-    )
+    SALESFORCE_CONSUMER_KEY: str = Field(description="Consumer Key from Connected App")
     SALESFORCE_CONSUMER_SECRET: str = Field(
         description="Consumer Secret from Connected App"
     )

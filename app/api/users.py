@@ -6,14 +6,21 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.dependencies import PaginationParams
-from app.schemas.user import UserCreate, UserDetailResponse, UserFullResponse, UserUpdate
+from app.schemas.user import (
+    UserCreate,
+    UserDetailResponse,
+    UserFullResponse,
+    UserUpdate,
+)
 from app.services import PaginatedResponse, PaginationType
 from app.services.user_service import UserServiceDep
 
 router = APIRouter()
 
 
-@router.post("/", response_model=UserDetailResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/", response_model=UserDetailResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_user(
     user_in: UserCreate,
     service: UserServiceDep,
@@ -58,8 +65,9 @@ async def get_user_details(
 
     if not user:
         raise HTTPException(404, f"User {user_id} not found")
-        
+
     return user
+
 
 @router.get("/{user_id}/simple", response_model=UserDetailResponse)
 async def get_user(

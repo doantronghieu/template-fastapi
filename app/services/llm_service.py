@@ -130,7 +130,9 @@ Please respond to the user's current query based on the conversation history and
 
     async def process_message_and_respond(
         self,
-        sender_id: Annotated[str, "Channel-specific user ID (e.g., PSID for Messenger)"],
+        sender_id: Annotated[
+            str, "Channel-specific user ID (e.g., PSID for Messenger)"
+        ],
         message_content: str,
         channel_type: ChannelType,
         channel_conversation_id: Annotated[str, "Channel's conversation identifier"],

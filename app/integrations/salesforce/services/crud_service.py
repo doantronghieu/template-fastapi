@@ -25,7 +25,9 @@ class CRUDService:
     def __init__(self, client: SalesforceClient):
         self.client = client
 
-    def _handle_error(self, e: SFError, object_type: str, record_id: str | None = None) -> None:
+    def _handle_error(
+        self, e: SFError, object_type: str, record_id: str | None = None
+    ) -> None:
         """Translate simple-salesforce exceptions to custom exceptions."""
         status = getattr(e, "status", None)
         content = getattr(e, "content", str(e))

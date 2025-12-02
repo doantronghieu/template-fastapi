@@ -21,7 +21,9 @@ class FileResponse(BaseModel):
     file_extension: str | None = Field(default=None, description="e.g., 'pdf'")
     content_size: int | None = Field(default=None, description="File size in bytes")
     created_date: str = Field(description="ISO 8601 creation timestamp")
-    latest_version_id: str | None = Field(default=None, description="ContentVersion ID for download")
+    latest_version_id: str | None = Field(
+        default=None, description="ContentVersion ID for download"
+    )
 
 
 class LibraryFilesResponse(BaseModel):
