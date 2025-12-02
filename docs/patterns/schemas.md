@@ -33,6 +33,8 @@ This document describes patterns for organizing and implementing schemas and mod
 
 **Principle**: Replace docstring parameter descriptions with inline type annotations. Docstrings describe only function/class purpose—no param/return lists.
 
+**Targets**: All methods/functions that currently have Args/Returns in docstring.
+
 **TypedDict fields**: Use `Annotated[Type, "description"]` for field-level documentation. Provides context without runtime overhead.
 
 ```python
@@ -48,7 +50,7 @@ id: str = Field(alias="Id", description="Record ID")
 **Guidelines**:
 - Document non-obvious fields
 - Skip documentation for self-explanatory fields 
-- Keep descriptions concise but still informative
+- Keep descriptions concise but still informative, have enough information for understanding
 - For Pydantic, combine with other Field parameters
 
 ## SQLModel Base Pattern ("Fat Models")
