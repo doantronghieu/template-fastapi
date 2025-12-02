@@ -9,30 +9,13 @@ from app.lib.llm.config import LLMProviderType
 
 
 def get_llm_provider() -> LLMProvider:
-    """Factory function to get the configured LLM provider.
-
-    Returns the provider implementation based on the LLM_PROVIDER setting.
-    This enables runtime switching between different LLM libraries.
-
-    Returns:
-        Configured LLM provider instance
-
-    Raises:
-        ValueError: If LLM_PROVIDER setting specifies an unknown provider
-
-    Example:
-        >>> # In .env: LLM_PROVIDER=langchain
-        >>> provider = get_llm_provider()
-        >>> model = provider.create_chat_model("gpt-5-nano", "openai")
-    """
+    """Get the configured LLM provider based on LLM_PROVIDER setting."""
     # Import providers here to avoid circular dependency
     from app.core.config import settings
     from app.lib.langchain.llm import LangChainLLMProvider
 
     providers: dict[str, type[LLMProvider]] = {
         LLMProviderType.LANGCHAIN.value: LangChainLLMProvider,
-        # Future providers can be added here:
-        # LLMProviderType.OPENAI.value: OpenAIProvider,
     }
 
     provider_class = providers.get(settings.LLM_PROVIDER)

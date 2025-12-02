@@ -1,75 +1,67 @@
-"""Base protocol for LLM provider implementations.
+"""Base class for LLM provider implementations.
 
-Defines the common interface that all LLM providers must implement,
+Defines common interface and shared utilities for all LLM providers,
 enabling runtime provider switching via the Strategy pattern.
 """
 
+from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
-from typing import Protocol
+from typing import Annotated
 
 from langchain_core.language_models import BaseChatModel
 from pydantic import BaseModel
 
 
-class LLMProvider(Protocol):
-    """Protocol defining the interface for LLM provider implementations.
+class LLMProvider(ABC):
+    """Base class for LLM provider implementations.
 
-    All provider implementations must support:
-    - Model creation with configurable parameters (basic, with tools, or structured output)
+    Provides shared utilities and defines required interface for:
+    - Model creation with configurable parameters
     - Three invocation modes: invoke, batch, stream
     """
 
+    def format_prompt(
+        self,
+        current_message: Annotated[str, "Current user message"],
+        history: Annotated[list[dict] | None, "Previous messages with 'role' and 'content' keys"] = None,
+    ) -> str:
+        """Format prompt with XML structure for conversation context."""
+        parts = []
+
+        if history:
+            history_text = "\n".join(
+                f"<{msg['role']}>{msg['content']}</{msg['role']}>"
+                for msg in history
+            )
+            parts.append(f"<history>\n{history_text}\n</history>")
+
+        parts.append(f"<current_message>\n{current_message}\n</current_message>")
+
+        return "\n\n".join(parts)
+
+    @abstractmethod
     def create_model(
         self,
-        model: str,
-        model_provider: str | None = None,
-        temperature: float = 0.0,
-        tools: list | None = None,
-        schema: type[BaseModel] | None = None,
+        model: Annotated[str, "Model identifier (e.g., 'gpt-5-nano')"],
+        model_provider: Annotated[str | None, "Provider identifier (e.g., 'openai')"] = None,
+        temperature: Annotated[float, "Sampling temperature (0.0 to 1.0)"] = 0.0,
+        tools: Annotated[list | None, "Tools to bind to the model"] = None,
+        schema: Annotated[type[BaseModel] | None, "Pydantic model for structured output"] = None,
         **kwargs,
     ) -> BaseChatModel:
-        """Create a chat model instance with optional tools and structured output.
-
-        Args:
-            model: Model identifier (e.g., "gpt-5-nano")
-            model_provider: Provider identifier (e.g., "openai")
-            temperature: Sampling temperature (0.0 to 1.0)
-            tools: Optional list of tools to bind to the model
-            schema: Optional Pydantic model class for structured output
-            **kwargs: Additional provider-specific parameters
-
-        Returns:
-            Configured chat model instance
-        """
+        """Create a chat model instance with optional tools and structured output."""
         ...
 
+    @abstractmethod
     async def invoke_model(
         self,
-        prompt: str | list[str],
-        mode: str = "invoke",
-        model: BaseChatModel | None = None,
-        model_name: str | None = None,
-        model_provider: str | None = None,
-        temperature: float = 0.0,
+        prompt: Annotated[str | list[str], "Single prompt or list (for batch mode)"],
+        mode: Annotated[str, "Invocation mode: 'invoke', 'batch', or 'stream'"] = "invoke",
+        model: Annotated[BaseChatModel | None, "Pre-configured model instance"] = None,
+        model_name: Annotated[str | None, "Model identifier (required if model not provided)"] = None,
+        model_provider: Annotated[str | None, "Provider identifier"] = None,
+        temperature: Annotated[float, "Sampling temperature (0.0 to 1.0)"] = 0.0,
         **kwargs,
     ) -> str | list[str] | AsyncIterator[str]:
-        """Invoke LLM with specified mode.
-
-        Args:
-            prompt: Single prompt or list of prompts (for batch mode)
-            mode: Invocation mode ("invoke", "batch", or "stream")
-            model: Pre-configured model instance (optional)
-            model_name: Model identifier (required if model not provided)
-            model_provider: Provider identifier (optional)
-            temperature: Sampling temperature (0.0 to 1.0)
-            **kwargs: Additional provider-specific parameters
-
-        Returns:
-            - "invoke" mode: Single response string
-            - "batch" mode: List of response strings
-            - "stream" mode: AsyncIterator yielding response chunks
-
-        Raises:
-            ValueError: If neither model nor model_name provided
-        """
+        """Invoke LLM with specified mode."""
         ...
