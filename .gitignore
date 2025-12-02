@@ -43,7 +43,10 @@ envs/**
 openapi.json
 client/
 
-**/tmp
+# Tmp directories - ignore all except sessions
+**/tmp/*
+!**/tmp/sessions/
+**/plans
 **/uv.lock
 **/hotel
 **/*.hotel
