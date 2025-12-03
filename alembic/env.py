@@ -1,6 +1,7 @@
 """Alembic Database Migration Environment.
 
-Auto-discovers models from app/models/*.py and extensions via glob pattern.
+Auto-discovers models from app/models/*.py, app/features/*/models.py,
+and extensions via glob pattern.
 Async-compatible with Supabase (statement_cache_size=0 for pgbouncer).
 
 See docs/tech-stack.md for Alembic configuration and migration workflow.
@@ -29,6 +30,15 @@ for model_file in models_path.glob("*.py"):
     if model_file.name != "__init__.py":
         module_name = f"app.models.{model_file.stem}"
         __import__(module_name)
+
+# Auto-import all feature models from app/features/*/models.py
+features_path = Path(__file__).parent.parent / "app" / "features"
+for feature_dir in features_path.iterdir():
+    if feature_dir.is_dir():
+        models_file = feature_dir / "models.py"
+        if models_file.exists():
+            module_name = f"app.features.{feature_dir.name}.models"
+            __import__(module_name)
 
 # Import extension models
 from app.extensions import load_extensions  # noqa: E402

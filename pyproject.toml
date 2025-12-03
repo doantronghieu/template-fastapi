@@ -23,8 +23,6 @@ dependencies = [
     "jinja2>=3.1.0",
     "python-multipart>=0.0.9",
     "httpx>=0.28.1",
-    "pytest>=8.4.2",
-    "pytest-asyncio>=1.2.0",
     "langchain>=0.3.27",
     "langchain-openai>=0.3.34",
     "langchain-groq>=0.3.8",
@@ -38,13 +36,21 @@ dependencies = [
     "snowflake-sqlalchemy>=1.7.7",
     "simple-salesforce>=1.12.9",
     "docling[tesserocr]>=2.63.0",
+    # Voice AI integrations
+    "livekit>=0.17.0",
+    "livekit-api>=0.8.0",
+    "livekit-agents>=0.11.0",
+    "livekit-plugins-deepgram>=0.6.0",
+    "livekit-plugins-silero>=0.6.0",
+    "livekit-plugins-langchain>=1.0.0",
+    "deepgram-sdk>=3.10.0",
+    "telnyx>=2.1.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.3.0",
-    "pytest-asyncio>=0.24.0",
-    "httpx>=0.28.0",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
     "ruff>=0.13.0",
 ]
 

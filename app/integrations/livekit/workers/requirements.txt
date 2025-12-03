@@ -1,0 +1,23 @@
+# LiveKit Agent dependencies
+# These are separate from the main FastAPI app
+
+# LiveKit Agents framework
+livekit-agents>=0.11.0
+
+# DeepGram plugin for STT/TTS
+livekit-plugins-deepgram>=0.6.0
+
+# Silero plugin for VAD (Voice Activity Detection)
+livekit-plugins-silero>=0.6.0
+
+# LangChain integration for LLM
+livekit-plugins-langchain>=1.0.0
+langchain>=0.3.0
+langchain-google-genai>=2.1.0
+
+# Settings management
+pydantic-settings>=2.0.0
+
+# Database (for direct service import)
+sqlmodel>=0.0.22
+asyncpg>=0.30.0

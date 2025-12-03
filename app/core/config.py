@@ -1,9 +1,20 @@
+from typing import Any
 from urllib.parse import quote
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.lib.llm.config import LLMProviderType
+from app.lib.voice.config import STTProviderType, TTSProviderType
+
+
+def _parse_comma_separated_list(v: Any) -> list[str]:
+    """Parse comma-separated string to list. Shared by extension/integration validators."""
+    if isinstance(v, str):
+        if not v.strip():
+            return []
+        return [x.strip() for x in v.split(",") if x.strip()]
+    return v or []
 
 
 class Settings(BaseSettings):
@@ -64,6 +75,16 @@ class Settings(BaseSettings):
         description="LLM provider (e.g., 'langchain', 'litellm')",
     )
 
+    # Voice Providers
+    STT_PROVIDER: str = Field(
+        default=STTProviderType.DEEPGRAM.value,
+        description="Speech-to-Text provider",
+    )
+    TTS_PROVIDER: str = Field(
+        default=TTSProviderType.DEEPGRAM.value,
+        description="Text-to-Speech provider",
+    )
+
     # Google Generative AI
     GOOGLE_API_KEY: str = Field(..., description="Google API key for Gemini models")
 
@@ -79,25 +100,11 @@ class Settings(BaseSettings):
         description="Comma-separated integrations (e.g., 'int_a,int_b') or empty for none",
     )
 
-    @field_validator("ENABLED_EXTENSIONS", mode="before")
+    @field_validator("ENABLED_EXTENSIONS", "ENABLED_INTEGRATIONS", mode="before")
     @classmethod
-    def parse_extensions(cls, v):
+    def parse_comma_separated(cls, v: Any) -> list[str]:
         """Parse comma-separated string to list."""
-        if isinstance(v, str):
-            if not v.strip():
-                return []
-            return [x.strip() for x in v.split(",") if x.strip()]
-        return v or []
-
-    @field_validator("ENABLED_INTEGRATIONS", mode="before")
-    @classmethod
-    def parse_integrations(cls, v):
-        """Parse comma-separated string to list."""
-        if isinstance(v, str):
-            if not v.strip():
-                return []
-            return [x.strip() for x in v.split(",") if x.strip()]
-        return v or []
+        return _parse_comma_separated_list(v)
 
     model_config = SettingsConfigDict(
         case_sensitive=True,

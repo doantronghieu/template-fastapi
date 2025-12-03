@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api import documents, examples, health, lib, messaging, tasks, users
+from app.api.features import features_router
 from app.api.integrations.router import integration_router
 from app.api.webhooks.router import webhook_router
 from app.core.openapi_tags import APITag
@@ -19,6 +20,9 @@ api_router.include_router(lib.router, prefix="/lib")
 
 # Integration routes (tags applied at integration router level)
 api_router.include_router(integration_router, prefix="/integrations")
+
+# Feature routes (internal, not in OpenAPI schema)
+api_router.include_router(features_router, prefix="/features", include_in_schema=False)
 
 # Webhook routes
 api_router.include_router(webhook_router, prefix="/webhooks", tags=[APITag.WEBHOOKS])

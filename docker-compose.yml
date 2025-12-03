@@ -42,4 +42,16 @@ services:
     command: uv run celery -A app.core.celery:celery_app beat --scheduler redbeat.schedulers:RedBeatScheduler --loglevel=info
     env_file: .env.docker
 
+  # LiveKit Voice Agent
+  voice-agent:
+    build:
+      context: .
+      dockerfile: app/integrations/livekit/workers/Dockerfile
+    container_name: voice-agent
+    env_file:
+      - .env.docker
+      - envs/integrations/livekit.env
+      - envs/integrations/deepgram.env
+    restart: unless-stopped
+
 # No volumes needed - using Supabase for database and Redis Cloud for caching

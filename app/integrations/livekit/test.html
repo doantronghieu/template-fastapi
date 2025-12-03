@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiveKit Voice Agent Test</title>
+    <script src="https://unpkg.com/livekit-client@2/dist/livekit-client.umd.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; }
+        body {
+            font-family: system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        h1 { text-align: center; margin-bottom: 24px; flex-shrink: 0; }
+        .layout { display: flex; gap: 20px; max-width: 900px; margin: 0 auto; flex: 1; min-height: 0; width: 100%; }
+        .panel { width: 320px; flex-shrink: 0; }
+        .chat-panel { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        .card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; margin-bottom: 4px; font-size: 0.85rem; color: #a0a0a0; }
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            font-size: 1rem;
+        }
+        input:focus { outline: none; border-color: #4f46e5; }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: #4f46e5; color: #fff; }
+        .btn-primary:hover:not(:disabled) { background: #4338ca; }
+        .btn-danger { background: #dc2626; color: #fff; }
+        .btn-danger:hover:not(:disabled) { background: #b91c1c; }
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+        }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .status-disconnected { background: rgba(239,68,68,0.2); }
+        .status-disconnected .status-dot { background: #ef4444; }
+        .status-connected { background: rgba(34,197,94,0.2); }
+        .status-connected .status-dot { background: #22c55e; }
+        .status-waiting { background: rgba(234,179,8,0.2); }
+        .status-waiting .status-dot { background: #eab308; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .controls { display: flex; gap: 10px; margin-top: 12px; }
+        .controls .btn { flex: 1; }
+        .participants { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+        .participant { background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; color: #a0a0a0; }
+        .participant.you { background: rgba(79,70,229,0.3); color: #c7d2fe; }
+        .info { font-size: 0.8rem; color: #666; text-align: center; margin-top: 8px; }
+        .hidden { display: none; }
+        #remoteAudio { display: none; }
+        .chat-box {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 16px;
+            flex: 1;
+            overflow-y: auto;
+            min-height: 200px;
+        }
+        .chat-title { font-size: 0.85rem; color: #a0a0a0; margin-bottom: 12px; }
+        .message { padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; font-size: 0.9rem; }
+        .message-user { background: rgba(79,70,229,0.3); margin-left: 20%; text-align: right; }
+        .message-agent { background: rgba(255,255,255,0.15); margin-right: 20%; }
+        .message-sender { font-size: 0.75rem; color: #a0a0a0; margin-bottom: 2px; }
+        .empty-state { color: #666; text-align: center; margin-top: 150px; font-size: 0.9rem; }
+        @media (max-width: 700px) {
+            .layout { flex-direction: column; }
+            .panel { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Voice Agent Test</h1>
+    <div class="layout">
+        <div class="panel">
+            <div class="card" id="connectionCard">
+                <div class="form-group">
+                    <label>Room Name</label>
+                    <input type="text" id="roomName">
+                </div>
+                <div class="form-group">
+                    <label>Your Name</label>
+                    <input type="text" id="participantName" value="web-user">
+                </div>
+                <button class="btn btn-primary" id="connectBtn" onclick="connect()">Connect</button>
+                <p class="info">Ensure FastAPI server and voice agent worker are running</p>
+            </div>
+            <div class="card hidden" id="connectedCard">
+                <div class="status status-disconnected" id="statusBar">
+                    <div class="status-dot"></div>
+                    <span id="statusText">Disconnected</span>
+                </div>
+                <div class="participants" id="participants">Participants: --</div>
+                <div class="controls">
+                    <button class="btn btn-danger" id="micBtn" onclick="toggleMic()">Muted</button>
+                    <button class="btn btn-danger" onclick="disconnect()">Disconnect</button>
+                </div>
+            </div>
+        </div>
+        <div class="chat-panel">
+            <div class="chat-box">
+                <div class="chat-title">Conversation</div>
+                <div id="messages">
+                    <div class="empty-state">Messages will appear here...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <audio id="remoteAudio" autoplay></audio>
+    <script>
+        const { Room, RoomEvent, Track } = LivekitClient;
+        const API_URL = '{{ api_url }}';
+        let room = null, micEnabled = false;
+
+        document.getElementById('roomName').value = `room-${crypto.randomUUID().slice(0, 8)}`;
+
+        function setStatus(state, text) {
+            document.getElementById('statusBar').className = `status status-${state}`;
+            document.getElementById('statusText').textContent = text;
+        }
+
+        function addMessage(sender, text, isUser) {
+            const container = document.getElementById('messages');
+            if (container.querySelector('.empty-state')) container.innerHTML = '';
+            const div = document.createElement('div');
+            div.className = `message ${isUser ? 'message-user' : 'message-agent'}`;
+            div.innerHTML = `<div class="message-sender">${sender}</div><div>${text}</div>`;
+            container.appendChild(div);
+            container.parentElement.scrollTop = container.parentElement.scrollHeight;
+        }
+
+        function updateParticipants() {
+            if (!room) return;
+            const container = document.getElementById('participants');
+            let html = `<span class="participant you">You</span>`;
+            room.remoteParticipants.forEach(p => html += `<span class="participant">${p.identity}</span>`);
+            container.innerHTML = html;
+        }
+
+        async function connect() {
+            const roomName = document.getElementById('roomName').value.trim();
+            const participantName = document.getElementById('participantName').value.trim();
+            if (!roomName || !participantName) { alert('Please enter room name and your name'); return; }
+
+            const btn = document.getElementById('connectBtn');
+            btn.disabled = true;
+            btn.textContent = 'Connecting...';
+
+            try {
+                const res = await fetch(`${API_URL}/api/integrations/livekit/token`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ room_name: roomName, participant_name: participantName, can_publish: true, can_subscribe: true })
+                });
+                if (!res.ok) throw new Error(`Token failed: ${res.status}`);
+                const { token, url } = await res.json();
+
+                room = new Room({ audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+                room.on(RoomEvent.TrackSubscribed, (track) => { if (track.kind === Track.Kind.Audio) track.attach(document.getElementById('remoteAudio')); });
+                room.on(RoomEvent.TrackUnsubscribed, (track) => track.detach());
+                room.on(RoomEvent.ParticipantConnected, (p) => { updateParticipants(); setStatus('connected', 'Agent joined'); });
+                room.on(RoomEvent.ParticipantDisconnected, (p) => { updateParticipants(); if (room.remoteParticipants.size === 0) setStatus('waiting', 'Waiting for agent...'); });
+                room.on(RoomEvent.Disconnected, () => setStatus('disconnected', 'Disconnected'));
+                room.on(RoomEvent.TranscriptionReceived, (segments, participant) => {
+                    for (const seg of segments) {
+                        if (seg.final) addMessage(participant?.identity || 'Agent', seg.text, participant?.identity === room.localParticipant.identity);
+                    }
+                });
+
+                await room.connect(url, token);
+                await room.startAudio();
+                setStatus(room.remoteParticipants.size > 0 ? 'connected' : 'waiting', room.remoteParticipants.size > 0 ? 'Agent joined' : 'Waiting for agent...');
+                updateParticipants();
+                document.getElementById('connectionCard').classList.add('hidden');
+                document.getElementById('connectedCard').classList.remove('hidden');
+            } catch (err) {
+                alert(`Connection failed: ${err.message}`);
+                btn.disabled = false;
+                btn.textContent = 'Connect';
+            }
+        }
+
+        async function toggleMic() {
+            if (!room) return;
+            try {
+                micEnabled = !micEnabled;
+                await room.localParticipant.setMicrophoneEnabled(micEnabled);
+                document.getElementById('micBtn').textContent = micEnabled ? 'Unmuted' : 'Muted';
+                document.getElementById('micBtn').className = `btn ${micEnabled ? 'btn-primary' : 'btn-danger'}`;
+            } catch (err) { alert(`Mic error: ${err.message}`); }
+        }
+
+        async function disconnect() {
+            if (room) { await room.disconnect(); room = null; }
+            micEnabled = false;
+            document.getElementById('connectionCard').classList.remove('hidden');
+            document.getElementById('connectedCard').classList.add('hidden');
+            document.getElementById('connectBtn').disabled = false;
+            document.getElementById('connectBtn').textContent = 'Connect';
+            document.getElementById('micBtn').textContent = 'Muted';
+            document.getElementById('micBtn').className = 'btn btn-danger';
+            document.getElementById('messages').innerHTML = '<div class="empty-state">Messages will appear here...</div>';
+            setStatus('disconnected', 'Disconnected');
+        }
+
+        window.addEventListener('beforeunload', () => room?.disconnect());
+    </script>
+</body>
+</html>
