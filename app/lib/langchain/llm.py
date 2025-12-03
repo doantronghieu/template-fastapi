@@ -21,10 +21,14 @@ class LangChainLLMProvider(LLMProvider):
     def create_model(
         self,
         model: Annotated[Model | str, "Model enum or string identifier"],
-        model_provider: Annotated[ModelProvider | str | None, "Provider (optional, can be inferred)"] = None,
+        model_provider: Annotated[
+            ModelProvider | str | None, "Provider (optional, can be inferred)"
+        ] = None,
         temperature: Annotated[float, "Sampling temperature (0.0 to 1.0)"] = 0.0,
         tools: Annotated[list | None, "Tools to bind to the model"] = None,
-        schema: Annotated[type[BaseModel] | None, "Pydantic model for structured output"] = None,
+        schema: Annotated[
+            type[BaseModel] | None, "Pydantic model for structured output"
+        ] = None,
         **kwargs,
     ) -> BaseChatModel:
         """Create chat model instance with optional tools and structured output."""
@@ -54,17 +58,27 @@ class LangChainLLMProvider(LLMProvider):
 
         if schema:
             method = "function_calling" if tools else None
-            chat_model = chat_model.with_structured_output(schema, method=method) if method else chat_model.with_structured_output(schema)
+            chat_model = (
+                chat_model.with_structured_output(schema, method=method)
+                if method
+                else chat_model.with_structured_output(schema)
+            )
 
         return chat_model
 
     async def invoke_model(
         self,
         prompt: Annotated[str | list[str], "Single prompt or list (for batch mode)"],
-        mode: Annotated[InvocationMode | str, "Invocation mode: invoke, batch, stream"] = InvocationMode.INVOKE,
+        mode: Annotated[
+            InvocationMode | str, "Invocation mode: invoke, batch, stream"
+        ] = InvocationMode.INVOKE,
         model: Annotated[BaseChatModel | None, "Pre-configured model instance"] = None,
-        model_name: Annotated[Model | str | None, "Model identifier (required if model not provided)"] = None,
-        model_provider: Annotated[ModelProvider | str | None, "Provider identifier"] = None,
+        model_name: Annotated[
+            Model | str | None, "Model identifier (required if model not provided)"
+        ] = None,
+        model_provider: Annotated[
+            ModelProvider | str | None, "Provider identifier"
+        ] = None,
         temperature: Annotated[float, "Sampling temperature (0.0 to 1.0)"] = 0.0,
         **kwargs,
     ) -> str | list[str] | AsyncIterator[str]:
@@ -78,7 +92,9 @@ class LangChainLLMProvider(LLMProvider):
 
         if mode_enum == InvocationMode.INVOKE:
             if isinstance(prompt, list):
-                raise ValueError("INVOKE mode requires a single prompt string, not a list")
+                raise ValueError(
+                    "INVOKE mode requires a single prompt string, not a list"
+                )
             response = await model.ainvoke(prompt)
             return response.content
 
@@ -90,7 +106,9 @@ class LangChainLLMProvider(LLMProvider):
 
         elif mode_enum == InvocationMode.STREAM:
             if isinstance(prompt, list):
-                raise ValueError("STREAM mode requires a single prompt string, not a list")
+                raise ValueError(
+                    "STREAM mode requires a single prompt string, not a list"
+                )
 
             async def stream_generator() -> AsyncIterator[str]:
                 async for chunk in model.astream(prompt):

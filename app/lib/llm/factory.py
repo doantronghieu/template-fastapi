@@ -4,10 +4,13 @@ Implements the Strategy pattern by selecting the appropriate LLM provider
 based on application configuration.
 """
 
+from functools import lru_cache
+
 from app.lib.llm.base import LLMProvider
 from app.lib.llm.config import LLMProviderType
 
 
+@lru_cache(maxsize=1)
 def get_llm_provider() -> LLMProvider:
     """Get the configured LLM provider based on LLM_PROVIDER setting."""
     # Import providers here to avoid circular dependency

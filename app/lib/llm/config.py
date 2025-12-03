@@ -26,6 +26,8 @@ class Model(str, Enum):
 
     # OpenAI models
     GPT_5 = "gpt-5"
+    GPT_5_MINI = "gpt-5-mini"
+    GPT_5_NANO = "gpt-5-nano"
 
     # Groq models (OpenAI OSS on Groq infrastructure)
     GPT_OSS_120B = "openai/gpt-oss-120b"
@@ -47,6 +49,8 @@ class InvocationMode(str, Enum):
 # Model to provider mapping for validation
 MODEL_PROVIDER_MAP: dict[Model, ModelProvider] = {
     Model.GPT_5: ModelProvider.OPENAI,
+    Model.GPT_5_MINI: ModelProvider.OPENAI,
+    Model.GPT_5_NANO: ModelProvider.OPENAI,
     Model.GPT_OSS_120B: ModelProvider.GROQ,
     Model.GPT_OSS_20B: ModelProvider.GROQ,
     Model.GEMINI_2_5_PRO: ModelProvider.GOOGLE,

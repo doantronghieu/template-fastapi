@@ -23,15 +23,20 @@ class LLMProvider(ABC):
     def format_prompt(
         self,
         current_message: Annotated[str, "Current user message"],
-        history: Annotated[list[dict] | None, "Previous messages with 'role' and 'content' keys"] = None,
+        history: Annotated[
+            list[dict] | None, "Previous messages with 'role' and 'content' keys"
+        ] = None,
+        system_prompt: Annotated[str | None, "System instructions"] = None,
     ) -> str:
         """Format prompt with XML structure for conversation context."""
         parts = []
 
+        if system_prompt:
+            parts.append(f"<system>\n{system_prompt}\n</system>")
+
         if history:
             history_text = "\n".join(
-                f"<{msg['role']}>{msg['content']}</{msg['role']}>"
-                for msg in history
+                f"<{msg['role']}>{msg['content']}</{msg['role']}>" for msg in history
             )
             parts.append(f"<history>\n{history_text}\n</history>")
 
@@ -43,10 +48,14 @@ class LLMProvider(ABC):
     def create_model(
         self,
         model: Annotated[str, "Model identifier (e.g., 'gpt-5-nano')"],
-        model_provider: Annotated[str | None, "Provider identifier (e.g., 'openai')"] = None,
+        model_provider: Annotated[
+            str | None, "Provider identifier (e.g., 'openai')"
+        ] = None,
         temperature: Annotated[float, "Sampling temperature (0.0 to 1.0)"] = 0.0,
         tools: Annotated[list | None, "Tools to bind to the model"] = None,
-        schema: Annotated[type[BaseModel] | None, "Pydantic model for structured output"] = None,
+        schema: Annotated[
+            type[BaseModel] | None, "Pydantic model for structured output"
+        ] = None,
         **kwargs,
     ) -> BaseChatModel:
         """Create a chat model instance with optional tools and structured output."""
@@ -56,9 +65,13 @@ class LLMProvider(ABC):
     async def invoke_model(
         self,
         prompt: Annotated[str | list[str], "Single prompt or list (for batch mode)"],
-        mode: Annotated[str, "Invocation mode: 'invoke', 'batch', or 'stream'"] = "invoke",
+        mode: Annotated[
+            str, "Invocation mode: 'invoke', 'batch', or 'stream'"
+        ] = "invoke",
         model: Annotated[BaseChatModel | None, "Pre-configured model instance"] = None,
-        model_name: Annotated[str | None, "Model identifier (required if model not provided)"] = None,
+        model_name: Annotated[
+            str | None, "Model identifier (required if model not provided)"
+        ] = None,
         model_provider: Annotated[str | None, "Provider identifier"] = None,
         temperature: Annotated[float, "Sampling temperature (0.0 to 1.0)"] = 0.0,
         **kwargs,
