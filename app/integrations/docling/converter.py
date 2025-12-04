@@ -1,4 +1,7 @@
-"""Docling document converter."""
+"""Docling document converter implementation.
+
+Implements DocumentConverter protocol using Docling library.
+"""
 
 import logging
 import warnings
@@ -32,8 +35,9 @@ from tenacity import (
     wait_exponential,
 )
 
-from app.lib.docling.config import docling_settings
-from app.lib.docling.schemas import ConversionMode, ConversionResult
+from app.integrations.docling.config import docling_settings
+from app.lib.documentation.base import DocumentConverter as DocumentConverterProtocol
+from app.lib.documentation.schemas import ConversionMode, ConversionResult
 
 # Suppress Docling markdown correction warnings (cosmetic, not errors)
 warnings.filterwarnings("ignore", message="Detected potentially incorrect Markdown")
@@ -85,7 +89,7 @@ def _create_retry_decorator() -> Callable:
     )
 
 
-class DoclingConverter:
+class DoclingConverter(DocumentConverterProtocol):
     """Document converter using Docling.
 
     Supports two modes:

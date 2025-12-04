@@ -1,10 +1,11 @@
-"""LLM provider test endpoints for testing lib/llm functionality."""
+"""LLM provider test endpoints."""
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
-from app.api.lib.schemas.llm import CreateModelRequest, InvokeModelRequest
-from app.lib.llm import InvocationMode, LLMProviderDep
+from app.lib.llm.config import InvocationMode
+from app.lib.llm.dependencies import LLMProviderDep
+from app.lib.llm.schemas import CreateModelRequest, InvokeModelRequest
 
 router = APIRouter()
 
@@ -12,7 +13,7 @@ router = APIRouter()
 @router.post("/create-model", summary="Test Create Model")
 async def test_create_model(req: CreateModelRequest, provider: LLMProviderDep):
     """Test creating a chat model via the configured provider."""
-    llm = provider.create_chat_model(
+    llm = provider.create_model(
         model=req.model.value,
         model_provider=req.model_provider.value if req.model_provider else None,
         temperature=req.temperature,
@@ -36,7 +37,6 @@ async def test_invoke_model(req: InvokeModelRequest, provider: LLMProviderDep):
         temperature=req.temperature,
     )
 
-    # Handle streaming mode differently
     if req.mode == InvocationMode.STREAM:
 
         async def generate():
@@ -45,5 +45,4 @@ async def test_invoke_model(req: InvokeModelRequest, provider: LLMProviderDep):
 
         return StreamingResponse(generate(), media_type="text/plain")
 
-    # Return invoke/batch results as JSON
     return {"response": result}

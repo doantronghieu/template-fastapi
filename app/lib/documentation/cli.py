@@ -1,13 +1,13 @@
 #!/usr/bin/env python
-"""CLI tool for testing Docling document conversion.
+"""CLI tool for testing document conversion.
 
 Usage:
-    uv run python -m app.lib.docling.cli <file_path> [--mode local|remote] [--ocr]
+    uv run python -m app.lib.documentation.cli <file_path> [--mode local|remote] [--ocr]
 
 Examples:
-    uv run python -m app.lib.docling.cli tmp/data/document.pdf
-    uv run python -m app.lib.docling.cli tmp/data/document.pdf --mode remote
-    uv run python -m app.lib.docling.cli tmp/data/scanned.pdf --mode local --ocr
+    uv run python -m app.lib.documentation.cli tmp/data/document.pdf
+    uv run python -m app.lib.documentation.cli tmp/data/document.pdf --mode remote
+    uv run python -m app.lib.documentation.cli tmp/data/scanned.pdf --mode local --ocr
 """
 
 import argparse
@@ -15,14 +15,13 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from app.lib.docling.converter import DoclingConverter
-from app.lib.docling.schemas import ConversionMode
+from app.lib.documentation import ConversionMode, get_document_converter
 
 
 def main():
     load_dotenv()
 
-    parser = argparse.ArgumentParser(description="Test Docling document conversion")
+    parser = argparse.ArgumentParser(description="Test document conversion")
     parser.add_argument("file_path", help="Path to document file")
     parser.add_argument(
         "--mode",
@@ -45,7 +44,7 @@ def main():
     print(f"Mode:   {mode.value.upper()}")
     print(f"OCR:    {args.ocr}")
 
-    converter = DoclingConverter()
+    converter = get_document_converter()
     result = converter.convert_from_path(path, mode=mode, enable_ocr=args.ocr)
 
     if result.success:
