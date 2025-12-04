@@ -18,6 +18,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.celery import celery_app
 from app.core.config import settings
+from app.integrations import require_integration
 from app.integrations.messenger import MessengerClient
 from app.integrations.messenger.config import messenger_settings
 
@@ -32,10 +33,13 @@ TASK_PREFIX = "app.features.omni_channel.tasks"
 
 
 @celery_app.task(name=f"{TASK_PREFIX}.process_messenger_message")
+@require_integration("messenger")
 def process_messenger_message(
     sender_id: Annotated[str, "User's Page-Scoped ID (PSID) from Facebook"],
     message_content: Annotated[str, "User's message text or attachment description"],
-    conversation_id: Annotated[str, "Conversation ID (same as sender_id for Messenger)"],
+    conversation_id: Annotated[
+        str, "Conversation ID (same as sender_id for Messenger)"
+    ],
 ) -> None:
     """Process Facebook Messenger message with AI response (background task).
 
@@ -128,12 +132,15 @@ def process_messenger_message(
 
 
 @celery_app.task(name=f"{TASK_PREFIX}.send_messenger_special_message")
+@require_integration("messenger")
 def send_messenger_special_message(
     sender_id: Annotated[str, "User's Page-Scoped ID (PSID)"],
     conversation_id: Annotated[str, "Conversation identifier"],
     message_type: Annotated[str, "'quick_replies' or 'generic_template'"],
     text: Annotated[str | None, "Message text for quick_replies"] = None,
-    quick_replies: Annotated[list[dict] | None, "Quick reply button definitions"] = None,
+    quick_replies: Annotated[
+        list[dict] | None, "Quick reply button definitions"
+    ] = None,
     elements: Annotated[list[dict] | None, "Generic template card elements"] = None,
 ) -> None:
     """Send special Messenger message (quick_replies, generic_template) and save to DB.

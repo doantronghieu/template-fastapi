@@ -8,11 +8,14 @@ from typing import TYPE_CHECKING, Annotated
 
 from fastapi import Depends
 
+from app.integrations import require_integration
+
 if TYPE_CHECKING:
     from app.lib.documentation.base import DocumentConverter
 
 
 @lru_cache
+@require_integration("docling")
 def get_document_converter() -> "DocumentConverter":
     """Provide singleton DocumentConverter instance.
 

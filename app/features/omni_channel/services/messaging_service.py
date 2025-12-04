@@ -94,7 +94,7 @@ class MessagingService:
 
     async def has_new_messages_since(
         self,
-        channel_conversation_id: str, # External
+        channel_conversation_id: str,  # External
         since: datetime,
         sender_role: MessageSenderRole | None = None,
     ) -> bool:

@@ -8,6 +8,7 @@ from telnyx import AsyncTelnyx
 
 from app.features.voice.models import VoiceSessionStatus, VoiceSessionType
 from app.features.voice.services.session_service import VoiceSessionService
+from app.integrations import require_integration
 from app.integrations.livekit.config import livekit_settings
 from app.integrations.livekit.services import get_room_service
 from app.integrations.telnyx.client import get_telnyx_client
@@ -141,6 +142,7 @@ class CallService:
 
 
 @lru_cache(maxsize=1)
+@require_integration("livekit")
 def get_call_service() -> CallService:
-    """Cached singleton."""
+    """Cached singleton. Requires livekit for SIP transfer."""
     return CallService()

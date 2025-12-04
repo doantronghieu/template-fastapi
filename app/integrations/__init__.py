@@ -6,14 +6,45 @@ Uses opt-out model: all integrations enabled by default, disable via DISABLED_IN
 
 import importlib
 import logging
+import os
 from pathlib import Path
-from typing import Annotated, Literal
-
-from app.core.config import settings
+from typing import Annotated, Callable, Literal, TypeVar
 
 logger = logging.getLogger(__name__)
 
+
+def _get_disabled_integrations() -> list[str]:
+    """Read DISABLED_INTEGRATIONS from env. Avoids circular import with settings."""
+    val = os.environ.get("DISABLED_INTEGRATIONS", "")
+    if not val.strip():
+        return []
+    return [x.strip() for x in val.split(",") if x.strip()]
+
+
+def _is_debug_mode() -> bool:
+    """Check if debug mode is enabled (for error handling decisions)."""
+    return os.environ.get("DATABASE_ECHO", "").lower() in ("true", "1", "yes")
+
+
 IntegrationHook = Literal["api", "webhooks", "tasks"]
+F = TypeVar("F", bound=Callable)
+
+
+class IntegrationDisabledError(Exception):
+    """Raised when trying to use a disabled integration."""
+
+    def __init__(
+        self,
+        integration: Annotated[str, "Name of the disabled integration"],
+        message: Annotated[str | None, "Custom error message"] = None,
+    ):
+        self.integration = integration
+        msg = (
+            message
+            or f"Integration '{integration}' is disabled. Enable it by removing from DISABLED_INTEGRATIONS."
+        )
+        super().__init__(msg)
+
 
 # Integration directory for auto-discovery
 _INTEGRATIONS_DIR = Path(__file__).parent
@@ -31,15 +62,31 @@ def discover_integrations() -> list[str]:
 def get_enabled_integrations() -> list[str]:
     """Get enabled integrations (all discovered minus disabled)."""
     all_integrations = discover_integrations()
-    disabled = settings.DISABLED_INTEGRATIONS or []
+    disabled = _get_disabled_integrations()
     return [name for name in all_integrations if name not in disabled]
 
 
 def is_integration_enabled(
     name: Annotated[str, "Integration name to check"],
 ) -> bool:
-    """Check if a specific integration is enabled."""
-    return name not in (settings.DISABLED_INTEGRATIONS or [])
+    """Check if a specific integration is enabled (not in DISABLED_INTEGRATIONS)."""
+    return name not in _get_disabled_integrations()
+
+
+def require_integration(
+    name: Annotated[str, "Integration name required by the decorated function"],
+) -> Callable[[F], F]:
+    """Decorator that enforces integration is enabled at decoration time.
+
+    Raises IntegrationDisabledError immediately when module loads if disabled.
+    """
+
+    def decorator(func: F) -> F:
+        if not is_integration_enabled(name):
+            raise IntegrationDisabledError(name)
+        return func
+
+    return decorator
 
 
 def get_integration_env_path(
@@ -87,6 +134,7 @@ def load_integrations(
         logger.debug("No integrations enabled (all disabled)")
         return
 
+    loaded: list[str] = []
     for integration_name in enabled_integrations:
         try:
             integration_module = importlib.import_module(
@@ -97,16 +145,15 @@ def load_integrations(
 
             if setup_func and callable(setup_func):
                 setup_func(*args, **kwargs)
-                logger.info(f"✓ Loaded integration '{integration_name}' hook '{hook}'")
-            else:
-                logger.debug(f"Integration '{integration_name}' has no '{hook}' hook")
+                loaded.append(integration_name)
 
         except ImportError as e:
-            error_msg = (
-                f"Integration '{integration_name}' failed to load hook '{hook}': {e}"
-            )
+            error_msg = f"Integration '{integration_name}' failed [{hook}]: {e}"
 
-            if settings.DATABASE_ECHO:
+            if _is_debug_mode():
                 raise ImportError(error_msg) from e
             else:
                 logger.warning(error_msg)
+
+    if loaded:
+        logger.info(f"✓ Integrations [{hook}]: {', '.join(loaded)}")
