@@ -53,11 +53,12 @@ Phone Call → Telnyx → SIP Transfer → LiveKit Room → Voice Agent → ...
    TELNYX_WEBHOOK_SECRET=secret
    ```
 
-### 4. Enable Integrations
+### 4. Verify Integrations Enabled
 
-In `.env`:
+All integrations are enabled by default. If you've disabled any, remove them from `DISABLED_INTEGRATIONS` in `.env`:
 ```
-ENABLED_INTEGRATIONS=livekit,telnyx,deepgram
+# Ensure livekit, telnyx, deepgram are NOT in DISABLED_INTEGRATIONS
+DISABLED_INTEGRATIONS=
 ```
 
 ## Running

@@ -94,13 +94,13 @@ class Settings(BaseSettings):
         description="Comma-separated extensions (e.g., 'ext_a,ext_b') or empty for core only",
     )
 
-    # Integrations
-    ENABLED_INTEGRATIONS: str | list[str] = Field(
+    # Integrations (opt-out model: all enabled by default, specify which to disable)
+    DISABLED_INTEGRATIONS: str | list[str] = Field(
         default="",
-        description="Comma-separated integrations (e.g., 'int_a,int_b') or empty for none",
+        description="Comma-separated integrations to disable (e.g., 'int_1,int_2')",
     )
 
-    @field_validator("ENABLED_EXTENSIONS", "ENABLED_INTEGRATIONS", mode="before")
+    @field_validator("ENABLED_EXTENSIONS", "DISABLED_INTEGRATIONS", mode="before")
     @classmethod
     def parse_comma_separated(cls, v: Any) -> list[str]:
         """Parse comma-separated string to list."""
