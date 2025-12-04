@@ -36,6 +36,7 @@ dependencies = [
     "snowflake-sqlalchemy>=1.7.7",
     "simple-salesforce>=1.12.9",
     "docling[tesserocr]>=2.63.0",
+    "mistralai>=1.0.0",
     # Voice AI integrations
     "livekit>=0.17.0",
     "livekit-api>=0.8.0",
@@ -60,4 +61,10 @@ pythonpath = ["."]
 asyncio_mode = "auto"
 markers = [
     "integration: marks tests that require external services (celery worker, etc.)",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
 ]

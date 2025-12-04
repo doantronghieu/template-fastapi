@@ -1,12 +1,11 @@
-"""Docling document converter implementation.
+"""Docling text extractor implementation.
 
-Implements DocumentConverter protocol using Docling library.
+Implements TextExtractor interface using Docling library.
 """
 
 import logging
 import warnings
 from io import BytesIO
-from pathlib import Path
 from typing import Annotated, Callable
 
 from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
@@ -36,8 +35,16 @@ from tenacity import (
 )
 
 from app.integrations.docling.config import docling_settings
-from app.lib.documentation.base import DocumentConverter as DocumentConverterProtocol
-from app.lib.documentation.schemas import ConversionMode, ConversionResult
+from app.lib.document_processing.base import TextExtractor
+from app.lib.document_processing.schemas import (
+    BytesTextSource,
+    DoclingOptions,
+    DoclingTextExtractionMode,
+    PathTextSource,
+    TextExtractionOptions,
+    TextExtractionResult,
+    TextSource,
+)
 
 # Suppress Docling markdown correction warnings (cosmetic, not errors)
 warnings.filterwarnings("ignore", message="Detected potentially incorrect Markdown")
@@ -89,8 +96,8 @@ def _create_retry_decorator() -> Callable:
     )
 
 
-class DoclingConverter(DocumentConverterProtocol):
-    """Document converter using Docling.
+class DoclingTextExtractor(TextExtractor):
+    """Text extractor using Docling.
 
     Supports two modes:
     - LOCAL: Tesseract OCR (free, local processing)
@@ -103,7 +110,10 @@ class DoclingConverter(DocumentConverterProtocol):
         self._local_converters: dict[bool, DocumentConverter] = {}
         self._remote_converter: DocumentConverter | None = None
 
-    def _get_local_converter(self, enable_ocr: bool) -> DocumentConverter:
+    def _get_local_converter(
+        self,
+        enable_ocr: Annotated[bool, "Enable OCR for scanned documents"],
+    ) -> DocumentConverter:
         """Get or create local converter with specified OCR setting."""
         if enable_ocr not in self._local_converters:
             pipeline_options = PdfPipelineOptions()
@@ -167,39 +177,36 @@ class DoclingConverter(DocumentConverterProtocol):
             )
         return self._remote_converter
 
-    def _execute_conversion(
+    def _execute_extraction(
         self,
         source: Annotated[str | DocumentStream, "File path or document stream"],
-        filename: str,
-        mode: ConversionMode,
+        mode: Annotated[DoclingTextExtractionMode, "Extraction mode"],
         enable_ocr: Annotated[bool, "OCR for scanned docs (LOCAL mode only)"],
-    ) -> ConversionResult:
-        """Execute document conversion with appropriate converter."""
+    ) -> TextExtractionResult:
+        """Execute document extraction with appropriate converter."""
         try:
-            if mode == ConversionMode.REMOTE:
+            if mode == DoclingTextExtractionMode.REMOTE:
                 converter = self._get_remote_converter()
                 result = self._convert_with_retry(converter, source)
             else:
                 converter = self._get_local_converter(enable_ocr)
                 result = converter.convert(source)
 
-            return ConversionResult(
+            return TextExtractionResult(
                 success=True,
-                markdown=result.document.export_to_markdown(),
-                filename=filename,
-                mode=mode,
+                result=result.document.export_to_markdown(),
             )
         except Exception as e:
-            logger.exception(f"Conversion failed for {filename}")
-            return ConversionResult(
+            logger.exception("Docling extraction failed")
+            return TextExtractionResult(
                 success=False,
-                error=str(e),
-                filename=filename,
-                mode=mode,
+                message=str(e),
             )
 
     def _convert_with_retry(
-        self, converter: DocumentConverter, source: str | DocumentStream
+        self,
+        converter: Annotated[DocumentConverter, "Docling converter"],
+        source: Annotated[str | DocumentStream, "Source to convert"],
     ) -> DoclingConversionResult:
         """Execute conversion with retry for transient errors."""
         retry_decorator = _create_retry_decorator()
@@ -210,31 +217,39 @@ class DoclingConverter(DocumentConverterProtocol):
 
         return _do_convert()
 
-    def convert_from_path(
+    def extract_text(
         self,
-        file_path: str | Path,
-        mode: ConversionMode = ConversionMode.LOCAL,
-        enable_ocr: Annotated[bool, "OCR for scanned docs (LOCAL mode only)"] = False,
-    ) -> ConversionResult:
-        """Convert document from file path to markdown."""
-        path = Path(file_path)
-        if not path.exists():
-            return ConversionResult(
-                success=False,
-                error=f"File not found: {file_path}",
-                filename=path.name,
-                mode=mode,
+        source: Annotated[TextSource, "Source document to extract text from"],
+        options: Annotated[TextExtractionOptions | None, "Extraction options"] = None,
+    ) -> TextExtractionResult:
+        """Extract text from document source using Docling."""
+        # Check URL support - Docling doesn't support URLs
+        self._check_url_support(source)
+
+        # Parse options
+        docling_options = options if isinstance(options, DoclingOptions) else None
+        mode = (
+            docling_options.mode if docling_options else DoclingTextExtractionMode.LOCAL
+        )
+        enable_ocr = docling_options.enable_ocr if docling_options else False
+
+        if isinstance(source, PathTextSource):
+            path = source.path
+            if not path.exists():
+                return TextExtractionResult(
+                    success=False,
+                    message=f"File not found: {path}",
+                )
+            return self._execute_extraction(str(path), mode, enable_ocr)
+
+        elif isinstance(source, BytesTextSource):
+            doc_stream = DocumentStream(
+                name=source.filename, stream=BytesIO(source.content)
             )
+            return self._execute_extraction(doc_stream, mode, enable_ocr)
 
-        return self._execute_conversion(str(path), path.name, mode, enable_ocr)
-
-    def convert_from_bytes(
-        self,
-        content: bytes,
-        filename: str,
-        mode: ConversionMode = ConversionMode.LOCAL,
-        enable_ocr: Annotated[bool, "OCR for scanned docs (LOCAL mode only)"] = False,
-    ) -> ConversionResult:
-        """Convert document from bytes to markdown."""
-        source = DocumentStream(name=filename, stream=BytesIO(content))
-        return self._execute_conversion(source, filename, mode, enable_ocr)
+        else:
+            return TextExtractionResult(
+                success=False,
+                message=f"Unsupported source type: {type(source).__name__}",
+            )

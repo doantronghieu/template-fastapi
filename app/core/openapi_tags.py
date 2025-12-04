@@ -31,7 +31,7 @@ class APITag(str, Enum):
 
     # Lib tags
     LLM = "LLM"
-    DOCUMENTATION = "Documentation"
+    DOCUMENT_PROCESSING = "Document Processing"
 
     # Integration tags
     MESSENGER = "Messenger"
@@ -71,8 +71,8 @@ TAG_METADATA: dict[APITag, dict] = {
         "description": "LLM provider-agnostic test endpoints",
         "group": TagGroup.LIB,
     },
-    APITag.DOCUMENTATION: {
-        "description": "Document conversion to markdown",
+    APITag.DOCUMENT_PROCESSING: {
+        "description": "Text extraction from documents",
         "group": TagGroup.LIB,
     },
 }
