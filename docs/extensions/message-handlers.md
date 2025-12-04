@@ -63,7 +63,7 @@ Add to extension's `__init__.py`:
 ```python
 def setup_message_handlers() -> None:
     from pathlib import Path
-    from app.services.handlers import channel_message_handler_registry
+    from app.features.omni_channel.handlers import channel_message_handler_registry
     from .handlers.channel_message import MyExtensionChannelMessageHandler
 
     extension_name = Path(__file__).parent.name
@@ -186,11 +186,11 @@ Previous implementation required `can_handle()` method to determine ownership pe
 
 ## File Reference
 
-**Core**:
-- Registry & Protocol: `app/services/handlers/channel_message_registry.py`
-- Default Handler: `app/services/handlers/channel_message_default.py`
-- Package Exports: `app/services/handlers/__init__.py`
-- Task Integration: `app/tasks/channel_tasks.py`
+**Core (in omni_channel feature)**:
+- Registry & Protocol: `app/features/omni_channel/handlers/channel_message_registry.py`
+- Default Handler: `app/features/omni_channel/handlers/channel_message_default.py`
+- Package Exports: `app/features/omni_channel/handlers/__init__.py`
+- Task Integration: `app/features/omni_channel/tasks/channel_tasks.py`
 - Startup Loading: `app/main.py` (lifespan) and `app/core/celery.py`
 
 **Extension Example**:

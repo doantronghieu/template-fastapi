@@ -14,7 +14,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.dependencies import SessionDep
-from app.models import (
+from app.utils import serialize_enum
+
+from ..models import (
     ChannelType,
     Conversation,
     Message,
@@ -23,7 +25,6 @@ from app.models import (
     UserChannel,
     UserRole,
 )
-from app.utils import serialize_enum
 
 
 class MessagingService:
@@ -35,16 +36,7 @@ class MessagingService:
     def _paginate_results(
         self, items: list, limit: int
     ) -> tuple[list, UUID | None, bool]:
-        """
-        Apply pagination logic to results list.
-
-        Args:
-            items: List of items (must have .id attribute for cursor)
-            limit: Maximum number of items per page
-
-        Returns:
-            Tuple of (paginated_items, next_cursor, has_more)
-        """
+        """Apply pagination logic to results list."""
         has_more = len(items) > limit
         if has_more:
             items = items[:limit]
@@ -52,19 +44,7 @@ class MessagingService:
         return items, next_cursor, has_more
 
     def _parse_order(self, order: str, model: type["SQLModel"]) -> tuple[Any, str]:
-        """
-        Parse order string and return column with direction.
-
-        Args:
-            order: Order string in format "field.direction" (e.g., "created_at.desc")
-            model: SQLModel class to get column from
-
-        Returns:
-            Tuple of (column, direction)
-
-        Raises:
-            HTTPException: 400 if invalid format or field
-        """
+        """Parse order string and return column with direction."""
         try:
             field, direction = order.split(".")
             if direction not in ["asc", "desc"]:
@@ -86,20 +66,10 @@ class MessagingService:
         conversation_id: UUID | None = None,
         channel_conversation_id: str | None = None,
     ) -> Conversation | None:
-        """
-        Find conversation by UUID or channel ID.
-
-        Args:
-            conversation_id: Internal conversation UUID
-            channel_conversation_id: External conversation identifier
-
-        Returns:
-            Conversation if found, None otherwise
-        """
+        """Find conversation by Internal UUID or External channel conversation ID."""
         if not conversation_id and not channel_conversation_id:
             return None
 
-        # Build query with OR conditions
         conditions = []
         if conversation_id:
             conditions.append(Conversation.id == conversation_id)
@@ -114,16 +84,7 @@ class MessagingService:
     async def _find_user_channel(
         self, channel_id: str, channel_type: ChannelType
     ) -> UserChannel | None:
-        """
-        Find UserChannel by channel_id and channel_type.
-
-        Args:
-            channel_id: External channel identifier
-            channel_type: Channel platform type
-
-        Returns:
-            UserChannel if found, None otherwise
-        """
+        """Find UserChannel by External channel_id and channel_type."""
         result = await self.session.execute(
             select(UserChannel)
             .where(UserChannel.channel_id == channel_id)
@@ -133,34 +94,11 @@ class MessagingService:
 
     async def has_new_messages_since(
         self,
-        channel_conversation_id: str,
+        channel_conversation_id: str, # External
         since: datetime,
         sender_role: MessageSenderRole | None = None,
     ) -> bool:
-        """Check if new messages exist after a given timestamp.
-
-        Generic helper to detect message activity patterns:
-        - Interruption detection
-        - Activity monitoring
-        - Notification triggers
-
-        Args:
-            channel_conversation_id: External channel conversation ID (e.g., Facebook PSID)
-            since: Timestamp to check for messages after
-            sender_role: Optional filter by message sender (CLIENT, AI, ADMIN)
-
-        Returns:
-            True if at least one message exists after the timestamp
-
-        Example:
-            >>> # Check if user sent any message in last 5 minutes
-            >>> five_mins_ago = datetime.now(timezone.utc) - timedelta(minutes=5)
-            >>> has_activity = await messaging_service.has_new_messages_since(
-            ...     channel_conversation_id="123456",
-            ...     since=five_mins_ago,
-            ...     sender_role=MessageSenderRole.CLIENT
-            ... )
-        """
+        """Check if new messages exist after a given timestamp."""
         stmt = (
             select(Message)
             .join(Conversation)
@@ -168,7 +106,6 @@ class MessagingService:
             .where(Message.created_at > since)
         )
 
-        # Optional filter by sender role
         if sender_role:
             stmt = stmt.where(Message.sender_role == sender_role)
 
@@ -179,19 +116,7 @@ class MessagingService:
     async def _create_user_with_channel(
         self, channel_id: str, channel_type: ChannelType
     ) -> User:
-        """
-        Create new user with associated channel.
-
-        Args:
-            channel_id: External channel identifier
-            channel_type: Channel platform type
-
-        Returns:
-            Newly created User
-
-        Raises:
-            IntegrityError: If race condition occurs (handled by caller)
-        """
+        """Create new user with associated External channel."""
         user = User(
             email=None,
             name=f"{channel_type.value.capitalize()} User {channel_id[-4:]}",
@@ -217,49 +142,28 @@ class MessagingService:
         channel_id: str,
         channel_type: ChannelType,
     ) -> User:
-        """
-        Find or create user by channel ID with race condition handling.
-
-        Args:
-            channel_id: External channel identifier
-            channel_type: Channel platform type
-
-        Returns:
-            User linked to the channel
-        """
-        # Check if user channel exists
+        """Find or create user by External channel ID with race condition handling."""
         user_channel = await self._find_user_channel(channel_id, channel_type)
         if user_channel:
             await self.session.refresh(user_channel, ["user"])
             return user_channel.user
 
-        # Create new user with channel
         try:
             return await self._create_user_with_channel(channel_id, channel_type)
         except IntegrityError:
-            # Race condition: user_channel created by another request
             await self.session.rollback()
             user_channel = await self._find_user_channel(channel_id, channel_type)
             if user_channel:
                 await self.session.refresh(user_channel, ["user"])
                 return user_channel.user
-            raise  # Re-raise if still not found (unexpected)
+            raise
 
     def _generate_conversation_title(
         self,
         channel_conversation_id: str | None,
         channel_type: ChannelType | None,
     ) -> str:
-        """
-        Generate conversation title based on channel type.
-
-        Args:
-            channel_conversation_id: External conversation identifier
-            channel_type: Channel platform type
-
-        Returns:
-            Generated title string
-        """
+        """Generate conversation title based on channel type."""
         if channel_conversation_id and channel_type:
             return f"Chat via {channel_type.value.capitalize()}"
         return f"Conversation {datetime.now(UTC).strftime('%Y-%m-%d %H:%M')}"
@@ -273,50 +177,23 @@ class MessagingService:
         title: str | None = None,
         auto_create: bool = True,
     ) -> Conversation:
-        """
-        Find or create conversation with multiple lookup strategies.
-
-        Priority:
-        1. If conversation_id: lookup by UUID (internal conversation)
-        2. If channel_conversation_id: lookup/create by channel ID
-        3. If auto_create=True: create new conversation
-        4. Else: raise HTTPException(404)
-
-        Args:
-            user_id: User who owns the conversation
-            conversation_id: Internal UUID (for direct conversations)
-            channel_conversation_id: External channel identifier
-            channel_type: Channel type (for auto-generated title)
-            title: Explicit title (overrides auto-generation)
-            auto_create: Whether to create if not found
-
-        Returns:
-            Conversation instance
-
-        Raises:
-            HTTPException: 404 if not found and auto_create=False
-        """
-        # Try to find existing conversation
+        """Find or create conversation with multiple lookup strategies."""
         conversation = await self._find_conversation(
             conversation_id=conversation_id,
             channel_conversation_id=channel_conversation_id,
         )
 
-        # If found and belongs to user, return it
         if conversation and conversation.user_id == user_id:
             return conversation
 
-        # If not found and auto_create is False, raise 404
         if not auto_create:
             raise HTTPException(404, "Conversation not found")
 
-        # Generate title if not provided
         if title is None:
             title = self._generate_conversation_title(
                 channel_conversation_id, channel_type
             )
 
-        # Create new conversation
         conversation = Conversation(
             user_id=user_id,
             title=title,
@@ -328,7 +205,6 @@ class MessagingService:
             await self.session.commit()
             await self.session.refresh(conversation)
         except IntegrityError:
-            # Race condition: conversation created by another request
             await self.session.rollback()
             if channel_conversation_id:
                 result = await self.session.execute(
@@ -347,11 +223,9 @@ class MessagingService:
         self,
         content: str,
         sender_role: MessageSenderRole,
-        # Channel mode parameters
         channel_id: str | None = None,
         channel_type: ChannelType | None = None,
         channel_conversation_id: str | None = None,
-        # Internal mode parameters
         user_id: UUID | None = None,
         conversation_id: UUID | None = None,
     ) -> Message:
@@ -365,26 +239,9 @@ class MessagingService:
         Internal mode (API):
             Provide: user_id, conversation_id, sender_role, content
             Skip channel resolution
-
-        Args:
-            content: Message content
-            sender_role: Who sent the message (client/ai/admin)
-            channel_id: External channel identifier (Telegram chat ID, etc.)
-            channel_type: Channel platform type
-            channel_conversation_id: External conversation identifier
-            user_id: User UUID (for internal mode)
-            conversation_id: Conversation UUID (for internal mode)
-
-        Returns:
-            Created message
-
-        Raises:
-            HTTPException: 400 if required parameters missing, 404 if conversation not found
         """
-        # Determine mode (validation already done at schema level)
         is_channel_mode = channel_id is not None and channel_type is not None
 
-        # Channel mode: resolve user and conversation
         if is_channel_mode:
             user = await self.get_or_create_user_by_channel(channel_id, channel_type)
             conversation = await self.get_or_create_conversation(
@@ -395,7 +252,6 @@ class MessagingService:
             resolved_user_id = user.id
             resolved_conversation_id = conversation.id
         else:
-            # Internal mode: validate ownership
             result = await self.session.execute(
                 select(Conversation)
                 .where(Conversation.id == conversation_id)
@@ -408,7 +264,6 @@ class MessagingService:
             resolved_user_id = user_id
             resolved_conversation_id = conversation_id
 
-        # Create message
         message = Message(
             conversation_id=resolved_conversation_id,
             user_id=resolved_user_id,
@@ -434,24 +289,7 @@ class MessagingService:
         order: str = "created_at.desc",
         reverse: bool = True,
     ) -> tuple[Conversation, list[Message], UUID | None]:
-        """
-        Get messages for a conversation with pagination support.
-
-        Args:
-            conversation_id: Internal conversation UUID
-            channel_conversation_id: External conversation identifier
-            limit: Maximum number of messages to return
-            before_message_id: Message UUID to fetch messages before (for pagination)
-            order: Sort order in format "field.direction" (e.g., "created_at.desc")
-            reverse: Whether to reverse the final result order
-
-        Returns:
-            Tuple of (conversation, messages_list, next_cursor)
-
-        Raises:
-            HTTPException: 404 if conversation not found, 400 if invalid order format
-        """
-        # Find conversation using extracted method
+        """Get messages for a conversation with pagination support."""
         conversation = await self._find_conversation(
             conversation_id=conversation_id,
             channel_conversation_id=channel_conversation_id,
@@ -459,24 +297,20 @@ class MessagingService:
         if not conversation:
             raise HTTPException(404, "Conversation not found")
 
-        # Parse order parameter using helper
         order_column, direction = self._parse_order(order, Message)
 
-        # Build query with ordering
         query = (
             select(Message)
             .where(Message.conversation_id == conversation.id)
-            .limit(limit + 1)  # Fetch one extra to check has_more
+            .limit(limit + 1)
         )
 
-        # Add pagination filter
         if before_message_id:
             before_msg_result = await self.session.execute(
                 select(Message).where(Message.id == before_message_id)
             )
             before_msg = before_msg_result.scalar_one_or_none()
             if before_msg:
-                # Assuming descending order by created_at for pagination
                 query = query.where(Message.created_at < before_msg.created_at)
 
         if direction == "desc":
@@ -487,10 +321,8 @@ class MessagingService:
         result = await self.session.execute(query)
         messages: list[Message] = list(result.scalars().all())
 
-        # Apply pagination using helper
         messages, next_cursor, _ = self._paginate_results(messages, limit)
 
-        # Apply reverse if requested
         if reverse:
             messages.reverse()
 
@@ -501,17 +333,7 @@ class MessagingService:
         limit: int = 50,
         cursor: UUID | None = None,
     ) -> tuple[list[dict], UUID | None, bool]:
-        """
-        Get all conversations across all users for admin view.
-
-        Args:
-            limit: Maximum number of conversations to return
-            cursor: Conversation UUID to start after (for pagination)
-
-        Returns:
-            Tuple of (conversations_list, next_cursor, has_more)
-        """
-        # Base query with eager loading for user and messages
+        """Get all conversations across all users for admin view."""
         query = (
             select(Conversation)
             .options(
@@ -523,10 +345,9 @@ class MessagingService:
                 ),
             )
             .order_by(Conversation.updated_at.desc())
-            .limit(limit + 1)  # Fetch one extra to check has_more
+            .limit(limit + 1)
         )
 
-        # Apply cursor pagination
         if cursor:
             cursor_conv_result = await self.session.execute(
                 select(Conversation).where(Conversation.id == cursor)
@@ -538,22 +359,18 @@ class MessagingService:
         result = await self.session.execute(query)
         conversations: list[Conversation] = list(result.scalars().all())
 
-        # Apply pagination using helper
         conversations, next_cursor, has_more = self._paginate_results(
             conversations, limit
         )
 
-        # Format response with eagerly loaded data
         formatted_conversations = []
         for conv in conversations:
-            # Get last message from eagerly loaded messages
             last_message = (
                 max(conv.messages, key=lambda m: m.created_at)
                 if conv.messages
                 else None
             )
 
-            # Get primary channel from eagerly loaded user channels
             user_channels = sorted(
                 conv.user.channels, key=lambda c: c.is_primary, reverse=True
             )
@@ -591,16 +408,7 @@ class MessagingService:
         self,
         user_id: UUID,
     ) -> list[dict]:
-        """
-        Get all conversations for a user with full details.
-
-        Args:
-            user_id: User UUID
-
-        Returns:
-            List of conversation dicts
-        """
-        # Query with eager loading for user and messages
+        """Get all conversations for a user with full details."""
         query = (
             select(Conversation)
             .options(
@@ -618,17 +426,14 @@ class MessagingService:
         result = await self.session.execute(query)
         conversations: list[Conversation] = list(result.scalars().all())
 
-        # Format response with eagerly loaded data
         formatted_conversations = []
         for conv in conversations:
-            # Get last message from eagerly loaded messages
             last_message = (
                 max(conv.messages, key=lambda m: m.created_at)
                 if conv.messages
                 else None
             )
 
-            # Get primary channel from eagerly loaded user channels
             user_channels = sorted(
                 conv.user.channels, key=lambda c: c.is_primary, reverse=True
             )
@@ -663,11 +468,9 @@ class MessagingService:
         return formatted_conversations
 
 
-# Dependency provider
 async def get_messaging_service(session: SessionDep) -> MessagingService:
     """Provide MessagingService instance."""
     return MessagingService(session)
 
 
-# Type alias for cleaner endpoint signatures
 MessagingServiceDep = Annotated[MessagingService, Depends(get_messaging_service)]

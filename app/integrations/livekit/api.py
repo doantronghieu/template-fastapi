@@ -145,5 +145,7 @@ async def test_page() -> HTMLResponse:
     Access at: /api/integrations/livekit/test
     """
     template = Path(__file__).parent / "test.html"
-    content = template.read_text().replace("{{ api_url }}", livekit_settings.BACKEND_URL)
+    content = template.read_text().replace(
+        "{{ api_url }}", livekit_settings.BACKEND_URL
+    )
     return HTMLResponse(content=content)

@@ -27,11 +27,40 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+
+def _get_task_modules() -> list[str]:
+    """Discover all task modules from core, features, and extensions.
+
+    Returns:
+        list: Task module paths for Celery include parameter
+    """
+    from pathlib import Path
+
+    modules = [settings.CELERY_TASKS_MODULE]  # Core tasks
+
+    # Discover feature task modules
+    features_path = Path(__file__).parent.parent / "features"
+    if features_path.exists():
+        for feature_dir in features_path.iterdir():
+            if not feature_dir.is_dir() or feature_dir.name.startswith("_"):
+                continue
+
+            tasks_package = feature_dir / "tasks" / "__init__.py"
+            tasks_file = feature_dir / "tasks.py"
+
+            if tasks_package.exists() or tasks_file.exists():
+                module_name = f"app.features.{feature_dir.name}.tasks"
+                modules.append(module_name)
+                logger.debug(f"Discovered feature tasks: {module_name}")
+
+    return modules
+
+
 celery_app = Celery(
     settings.CELERY_APP_NAME,
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
-    include=[settings.CELERY_TASKS_MODULE],
+    include=_get_task_modules(),
 )
 
 
@@ -131,12 +160,6 @@ celery_app.conf.update(
 from app.extensions import load_extensions  # noqa: E402
 
 load_extensions("tasks")
-
-# Initialize channel message handlers
-if "messenger" in settings.ENABLED_INTEGRATIONS:
-    from app.services.handlers import initialize_channel_message_handlers  # noqa: E402
-
-    initialize_channel_message_handlers()
 
 
 # Automatic task ID binding via signals

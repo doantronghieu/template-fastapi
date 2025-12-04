@@ -8,18 +8,6 @@ Architecture:
 - Registry pattern for handler registration via extension hooks
 - Automatic handler selection: enabled extension's handler used if available
 - Convention over configuration: no need for can_handle() checks
-
-Example:
-    # In extension's handlers/channel_message.py
-    class MyExtensionChannelMessageHandler:
-        async def handle_message(self, sender_id: str, message_content: str, ...) -> str:
-            # Custom AI logic for your extension
-            return await self.ai_service.generate_response(...)
-
-    # In extension's __init__.py
-    def setup_message_handlers() -> None:
-        from .handlers.channel_message import MyExtensionChannelMessageHandler
-        channel_message_handler_registry.register("my_extension", MyExtensionChannelMessageHandler())
 """
 
 import logging
@@ -27,7 +15,7 @@ from typing import Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import ChannelType
+from ..models import ChannelType
 
 logger = logging.getLogger(__name__)
 
@@ -42,23 +30,13 @@ class ChannelMessageHandler(Protocol):
 
     async def handle_message(
         self,
-        sender_id: str,
+        sender_id: str,  # Channel-specific user identifier
         message_content: str,
         channel_type: ChannelType,
         channel_conversation_id: str,
         session: AsyncSession,
     ) -> str:
         """Process message and generate AI response.
-
-        Args:
-            sender_id: Channel-specific user identifier
-            message_content: User's message text
-            channel_type: Source channel (MESSENGER, WHATSAPP, etc.)
-            channel_conversation_id: Channel's conversation identifier
-            session: Database session for persistence
-
-        Returns:
-            Generated AI response text ready for sending
 
         Note:
             Handler is responsible for complete processing flow:
@@ -86,10 +64,6 @@ class ChannelMessageHandlerRegistry:
 
     def register(self, extension_name: str, handler: ChannelMessageHandler) -> None:
         """Register a channel message handler for an extension.
-
-        Args:
-            extension_name: Name of extension providing the handler
-            handler: Handler instance implementing ChannelMessageHandler protocol
 
         Note:
             Extensions should register handlers in setup_message_handlers() hook.
@@ -146,14 +120,11 @@ def initialize_channel_message_handlers() -> None:
     1. Creates and registers default handler
     2. Loads extension handlers via setup_message_handlers() hook
     3. Finalizes handler selection
-
-    Call once at startup (FastAPI lifespan or Celery module initialization).
     """
     from app.extensions import load_extensions
     from app.lib.llm.factory import get_llm_provider
-    from app.services.handlers.channel_message_default import (
-        DefaultChannelMessageHandler,
-    )
+
+    from .channel_message_default import DefaultChannelMessageHandler
 
     # Initialize default handler
     llm_provider = get_llm_provider()

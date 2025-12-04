@@ -10,6 +10,7 @@ Background tasks handle async processing via async_to_sync bridge:
 
 import logging
 from datetime import datetime, timezone
+from typing import Annotated
 
 from asgiref.sync import async_to_sync
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -18,43 +19,36 @@ from sqlalchemy.orm import sessionmaker
 from app.core.celery import celery_app
 from app.core.config import settings
 from app.integrations.messenger import MessengerClient
-from app.models import ChannelType
-from app.services.handlers import channel_message_handler_registry
+from app.integrations.messenger.config import messenger_settings
+
+from ..handlers import channel_message_handler_registry
+from ..models import ChannelType, MessageSenderRole
+from ..services import MessagingService
 
 logger = logging.getLogger(__name__)
 
+# Task name prefix for feature tasks - matches module path for Celery auto-discovery
+TASK_PREFIX = "app.features.omni_channel.tasks"
 
-@celery_app.task(name=f"{settings.CELERY_TASKS_MODULE}.process_messenger_message")
+
+@celery_app.task(name=f"{TASK_PREFIX}.process_messenger_message")
 def process_messenger_message(
-    sender_id: str, message_content: str, conversation_id: str
-):
-    """
-    Process Facebook Messenger message with AI response (background task).
+    sender_id: Annotated[str, "User's Page-Scoped ID (PSID) from Facebook"],
+    message_content: Annotated[str, "User's message text or attachment description"],
+    conversation_id: Annotated[str, "Conversation ID (same as sender_id for Messenger)"],
+) -> None:
+    """Process Facebook Messenger message with AI response (background task).
 
-    This task is queued from webhook endpoint and executed by Celery worker.
-    Handles complete message processing flow including database persistence,
-    AI response generation, and sending reply via Facebook Send API.
+    Queued from webhook endpoint, executed by Celery worker. Handles complete
+    message flow: save user message → generate AI response → save AI response
+    → send via Facebook Send API.
 
-    Args:
-        sender_id: User's Page-Scoped ID (PSID) from Facebook
-        message_content: User's message text (or attachment description)
-        conversation_id: Conversation identifier (same as sender_id for Messenger)
-
-    Flow:
-        1. Save user message → Generate AI response → Save AI response
-        2. Send AI response via Facebook Send API
-
-    Error Handling:
-        Re-raises exceptions to mark Celery task as failed (visible in Flower UI).
-        Logs full stack trace for debugging.
-
-    Note:
-        Uses async_to_sync to bridge async services into sync Celery context.
-        Task name must match module path for Celery auto-discovery.
+    Re-raises exceptions to mark Celery task as failed (visible in Flower UI).
+    Uses async_to_sync to bridge async services into sync Celery context.
     """
 
     @async_to_sync
-    async def _process_async():
+    async def _process_async() -> None:
         """Async implementation called via async_to_sync bridge."""
         # Create fresh engine for this task's event loop
         # Minimal pool settings to conserve connections (Supabase free tier limit)
@@ -72,11 +66,10 @@ def process_messenger_message(
 
         try:
             async with async_session_maker() as session:
-                # Initialize messenger client
                 messenger_client = MessengerClient(
-                    page_access_token=settings.FACEBOOK_PAGE_ACCESS_TOKEN,
-                    app_secret=settings.FACEBOOK_APP_SECRET,
-                    graph_api_version=settings.FACEBOOK_GRAPH_API_VERSION,
+                    page_access_token=messenger_settings.FACEBOOK_PAGE_ACCESS_TOKEN,
+                    app_secret=messenger_settings.FACEBOOK_APP_SECRET,
+                    graph_api_version=messenger_settings.FACEBOOK_GRAPH_API_VERSION,
                 )
 
                 try:
@@ -84,7 +77,7 @@ def process_messenger_message(
                     handler = channel_message_handler_registry.get_handler()
 
                     # Process: Save user msg → Generate AI response → Save AI msg
-                    # Handler now returns AIResponse (structured) instead of str
+                    # Handler returns AIResponse (structured) or str (legacy)
                     ai_response = await handler.handle_message(
                         sender_id=sender_id,
                         message_content=message_content,
@@ -94,14 +87,13 @@ def process_messenger_message(
                     )
 
                     # Capture timestamp AFTER message processing completes
-                    # This ensures user's triggering message is already saved to DB
+                    # Ensures user's triggering message is saved to DB first
                     # Only messages created AFTER this point are interruptions
                     response_start_time = datetime.now(timezone.utc)
 
-                    # Send structured multi-message response
                     from app.integrations.messenger import MessageSenderService
 
-                    # Check if response has .messages attribute (duck typing)
+                    # Check if response has .messages attribute (duck typing for AIResponse)
                     if hasattr(ai_response, "messages"):
                         # Use MessageSenderService for multi-message sending
                         sender_service = MessageSenderService(session, messenger_client)
@@ -135,39 +127,26 @@ def process_messenger_message(
     _process_async()
 
 
-@celery_app.task(name=f"{settings.CELERY_TASKS_MODULE}.send_messenger_special_message")
+@celery_app.task(name=f"{TASK_PREFIX}.send_messenger_special_message")
 def send_messenger_special_message(
-    sender_id: str,
-    conversation_id: str,
-    message_type: str,
-    text: str | None = None,
-    quick_replies: list[dict] | None = None,
-    elements: list[dict] | None = None,
-):
-    """
-    Send special Messenger message (quick_replies, generic_template) and save to DB.
+    sender_id: Annotated[str, "User's Page-Scoped ID (PSID)"],
+    conversation_id: Annotated[str, "Conversation identifier"],
+    message_type: Annotated[str, "'quick_replies' or 'generic_template'"],
+    text: Annotated[str | None, "Message text for quick_replies"] = None,
+    quick_replies: Annotated[list[dict] | None, "Quick reply button definitions"] = None,
+    elements: Annotated[list[dict] | None, "Generic template card elements"] = None,
+) -> None:
+    """Send special Messenger message (quick_replies, generic_template) and save to DB.
 
     Formats rich message data into human-readable text for database storage,
     sends via Messenger API, and persists formatted message to conversation history.
-
-    Args:
-        sender_id: User's Page-Scoped ID (PSID)
-        conversation_id: Conversation identifier
-        message_type: "quick_replies" or "generic_template"
-        text: Message text (for quick_replies)
-        quick_replies: Quick reply buttons
-        elements: Generic template elements
-
-    Note:
-        Uses format_messenger_message() to convert rich messages to readable text
-        for LLM context and conversation history.
+    Uses format_messenger_message() to convert rich messages to readable text
+    for LLM context and conversation history.
     """
     from app.integrations.messenger import format_messenger_message
-    from app.models import MessageSenderRole
-    from app.services.messaging_service import MessagingService
 
     @async_to_sync
-    async def _send_special_message():
+    async def _send_special_message() -> None:
         """Async implementation for sending special messages."""
         # Create fresh engine for this task's event loop
         # Minimal pool settings to conserve connections (Supabase free tier limit)
@@ -186,9 +165,9 @@ def send_messenger_special_message(
         try:
             async with async_session_maker() as session:
                 messenger_client = MessengerClient(
-                    page_access_token=settings.FACEBOOK_PAGE_ACCESS_TOKEN,
-                    app_secret=settings.FACEBOOK_APP_SECRET,
-                    graph_api_version=settings.FACEBOOK_GRAPH_API_VERSION,
+                    page_access_token=messenger_settings.FACEBOOK_PAGE_ACCESS_TOKEN,
+                    app_secret=messenger_settings.FACEBOOK_APP_SECRET,
+                    graph_api_version=messenger_settings.FACEBOOK_GRAPH_API_VERSION,
                 )
                 messaging_service = MessagingService(session)
 
@@ -206,10 +185,11 @@ def send_messenger_special_message(
                         raise ValueError(f"Unsupported message_type: {message_type}")
 
                     logger.info(
-                        f"Special message sent: sender={sender_id} type={message_type} msg_id={result.get('message_id')}"
+                        f"Special message sent: sender={sender_id} type={message_type} "
+                        f"msg_id={result.get('message_id')}"
                     )
 
-                    # Format message for database storage
+                    # Format message for database storage (human-readable for LLM context)
                     formatted_content = format_messenger_message(
                         message_type=message_type,
                         text=text,
@@ -235,4 +215,5 @@ def send_messenger_special_message(
         finally:
             await engine.dispose()
 
+    # Execute async code in sync context
     _send_special_message()

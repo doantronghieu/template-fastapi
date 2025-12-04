@@ -69,7 +69,7 @@ def setup_message_handlers() -> None:
     Example implementation:
 
         from pathlib import Path
-        from app.services.handlers import channel_message_handler_registry
+        from app.features.omni_channel.handlers import channel_message_handler_registry
         from .handlers.channel_message import MyExtensionChannelMessageHandler
 
         extension_name = Path(__file__).parent.name

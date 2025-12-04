@@ -1,16 +1,14 @@
-"""LLM service for AI-powered conversation responses.
+"""Chat service for AI-powered conversation responses.
 
 Orchestrates conversation flow:
 1. Retrieves conversation history from database
 2. Formats context for LLM (system prompt + history + current query)
 3. Generates AI response with retry logic
 4. Saves messages to database
-
-Supports multiple messaging channels (Messenger, WhatsApp, Telegram, etc.)
-through channel-agnostic message handling.
 """
 
 import logging
+from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
@@ -22,13 +20,23 @@ from app.lib.llm import InvocationMode, LLMProviderDep
 from app.lib.llm.base import LLMProvider
 from app.lib.llm.config import Model, ModelProvider
 from app.lib.utils import async_retry
-from app.models import ChannelType, MessageSenderRole
-from app.services.messaging_service import MessagingService
+
+from ..models import ChannelType, MessageSenderRole
+from .messaging_service import MessagingService
 
 logger = logging.getLogger(__name__)
 
-# System prompt defining AI assistant behavior and constraints
-SYSTEM_PROMPT = """You are a helpful AI assistant having a text conversation with a user.
+
+def load_prompt(filename: str) -> str | None:
+    """Load prompt from prompts directory."""
+    file_path = Path(__file__).parent.parent / "prompts" / filename
+    if file_path.exists():
+        return file_path.read_text().strip()
+    return None
+
+
+# Default system prompt if file not found
+DEFAULT_SYSTEM_PROMPT = """You are a helpful AI assistant having a text conversation with a user.
 Keep your responses conversational, friendly, and concise (under 2000 characters).
 Do not use markdown formatting - write naturally as you would in a text message.
 If you need to list things, use simple bullet points with hyphens.
@@ -39,42 +47,30 @@ Important context notes:
 - When you see "[User sent a file: filename]", let the user know you cannot process attachments and ask them to send their question as text."""
 
 
-class LLMService:
-    """
-    Service for generating AI responses to user messages.
+class ChatService:
+    """Service for generating AI responses to user messages.
 
-    Handles complete conversation flow including:
-    - Message persistence (save user/AI messages)
-    - Context retrieval (conversation history)
-    - LLM invocation (generate responses)
-    - Retry logic (handle transient failures)
-
-    Works with any LLM provider through abstraction layer.
+    Handles complete conversation flow including message persistence,
+    context retrieval, LLM invocation, and retry logic.
     """
 
     def __init__(self, session: AsyncSession, llm_provider: LLMProvider):
         self.session = session
         self.llm_provider = llm_provider
         self.messaging_service = MessagingService(session)
+        self._system_prompt = load_prompt("system.md") or DEFAULT_SYSTEM_PROMPT
 
     async def _get_conversation_history(
         self, conversation_id: UUID, limit: int = 50
     ) -> list[dict]:
-        """
-        Retrieve latest N messages from conversation history formatted for LLM.
-
-        Fetches LATEST messages using DESC order (newest first from DB),
-        then reverses to chronological ASC (oldest first for LLM context).
-        Limit of 50 provides sufficient context while staying within token limits.
-        """
+        """Retrieve latest N messages from conversation history formatted for LLM."""
         _, messages, _ = await self.messaging_service.get_conversation_messages(
             conversation_id=conversation_id,
             limit=limit,
             order="created_at.desc",  # Get latest messages first
-            reverse=True,  # Then reverse to chronological order (oldest → newest)
+            reverse=True,  # Reverse to chronological order (oldest → newest)
         )
 
-        # Format messages with roles recognized by LLM
         return [
             {
                 "role": "assistant"
@@ -87,26 +83,17 @@ class LLMService:
 
     @async_retry(max_retries=3, exceptions=(Exception,))
     async def generate_response(self, conversation_id: UUID) -> str:
-        """
-        Generate AI response based on conversation history with automatic retry.
-
-        Fetches history, formats as XML-like prompt (<SYSTEM>, <HISTORY>, <CURRENT_USER_QUERY>),
-        and invokes LLM. Plain string format used for model compatibility.
-        Retries with exponential backoff on failure.
-        """
-        # Get conversation history (includes latest user message from DB)
+        """Generate AI response based on conversation history with automatic retry."""
         history = await self._get_conversation_history(conversation_id)
 
-        # Extract current query and build history text
         current_query = history[-1]["content"] if history else ""
         history_text = "\n".join(
             f"<{msg['role'].upper()}>\n{msg['content']}\n</{msg['role'].upper()}>"
             for msg in history[:-1]
         )
 
-        # Format complete prompt with XML-like structure
         prompt_text = f"""<SYSTEM>
-{SYSTEM_PROMPT}
+{self._system_prompt}
 </SYSTEM>
 
 <HISTORY>
@@ -119,13 +106,12 @@ class LLMService:
 
 Please respond to the user's current query based on the conversation history and system instructions."""
 
-        # Invoke LLM (retry handled by decorator)
         return await self.llm_provider.invoke_model(
             prompt=prompt_text,
             mode=InvocationMode.INVOKE.value,
             model_name=Model.GPT_OSS_120B,
             model_provider=ModelProvider.GROQ,
-            temperature=0.0,  # Deterministic responses
+            temperature=0.0,
         )
 
     async def process_message_and_respond(
@@ -137,13 +123,7 @@ Please respond to the user's current query based on the conversation history and
         channel_type: ChannelType,
         channel_conversation_id: Annotated[str, "Channel's conversation identifier"],
     ) -> str:
-        """
-        Process incoming message, save to DB, generate and save AI response.
-
-        Main entry point for message processing. Saves user message (auto-creates
-        user/conversation if first interaction), generates AI response from history,
-        persists AI response, and returns text for sending via channel.
-        """
+        """Process incoming message, save to DB, generate and save AI response."""
         # Save user message (auto-creates user/conversation if first interaction)
         user_message = await self.messaging_service.create_message(
             content=message_content,
@@ -153,12 +133,10 @@ Please respond to the user's current query based on the conversation history and
             channel_conversation_id=channel_conversation_id,
         )
 
-        # Generate AI response based on full conversation history
         ai_response_text = await self.generate_response(
             conversation_id=user_message.conversation_id,
         )
 
-        # Persist AI response to database for history tracking
         await self.messaging_service.create_message(
             content=ai_response_text,
             sender_role=MessageSenderRole.AI,
@@ -169,13 +147,11 @@ Please respond to the user's current query based on the conversation history and
         return ai_response_text
 
 
-# Dependency provider
-async def get_llm_service(
+async def get_chat_service(
     session: SessionDep, llm_provider: LLMProviderDep
-) -> LLMService:
-    """Provide LLMService instance with injected dependencies."""
-    return LLMService(session, llm_provider)
+) -> ChatService:
+    """Provide ChatService instance with injected dependencies."""
+    return ChatService(session, llm_provider)
 
 
-# Type alias for cleaner endpoint signatures
-LLMServiceDep = Annotated[LLMService, Depends(get_llm_service)]
+ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]

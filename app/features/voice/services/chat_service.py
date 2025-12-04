@@ -29,13 +29,17 @@ class VoiceChatService:
         llm_provider: Annotated[LLMProvider, "LLM provider for responses"],
         model: Annotated[str, "LLM model identifier for responses"],
         model_provider: Annotated[str, "Model provider"],
-        system_prompt_path: Annotated[str | None, "Path to system prompt .md file"] = None,
+        system_prompt_path: Annotated[
+            str | None, "Path to system prompt .md file"
+        ] = None,
     ) -> None:
         self.session_service = session_service
         self.llm_provider = llm_provider
         self.model = model
         self.model_provider = model_provider
-        self.system_prompt = load_prompt(system_prompt_path) if system_prompt_path else None
+        self.system_prompt = (
+            load_prompt(system_prompt_path) if system_prompt_path else None
+        )
 
     async def process_chat(
         self,
@@ -65,7 +69,9 @@ class VoiceChatService:
         )
 
         # Format prompt with system message and history context
-        formatted_prompt = self.llm_provider.format_prompt(text, history, self.system_prompt)
+        formatted_prompt = self.llm_provider.format_prompt(
+            text, history, self.system_prompt
+        )
 
         # Generate LLM response
         response_text = await self.llm_provider.invoke_model(

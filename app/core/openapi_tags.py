@@ -26,9 +26,7 @@ class APITag(str, Enum):
     # Core tags
     HEALTH = "Health"
     EXAMPLES = "Examples"
-    MESSAGING = "Messaging"
     TASKS = "Tasks"
-    USERS = "Users"
     WEBHOOKS = "Webhooks"
 
     # Lib tags
@@ -51,16 +49,8 @@ TAG_METADATA: dict[APITag, dict] = {
         "description": "Example CRUD operations",
         "group": TagGroup.CORE,
     },
-    APITag.MESSAGING: {
-        "description": "Messaging system endpoints",
-        "group": TagGroup.CORE,
-    },
     APITag.TASKS: {
         "description": "Celery background task management",
-        "group": TagGroup.CORE,
-    },
-    APITag.USERS: {
-        "description": "User management and details",
         "group": TagGroup.CORE,
     },
     APITag.WEBHOOKS: {

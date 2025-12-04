@@ -4,7 +4,9 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query
 
-from app.schemas.messaging import (
+from app.utils import serialize_enum
+
+from ..schemas import (
     ConversationHistoryResponse,
     ConversationListResponse,
     ConversationMessagesQuery,
@@ -12,8 +14,7 @@ from app.schemas.messaging import (
     MessageHistoryItem,
     MessageResponse,
 )
-from app.services.messaging_service import MessagingServiceDep
-from app.utils import serialize_enum
+from ..services import MessagingServiceDep
 
 router = APIRouter()
 
@@ -23,8 +24,7 @@ async def create_message(
     data: MessageCreate,
     service: MessagingServiceDep,
 ):
-    """
-    Create a message with auto-provisioning of user and conversation.
+    """Create a message with auto-provisioning of user and conversation.
 
     Supports two modes:
     - Channel mode: Provide channel_id, channel_type, channel_conversation_id
@@ -48,15 +48,10 @@ async def get_all_conversations(
     limit: int = Query(50, ge=1, le=100),
     cursor: UUID | None = Query(None),
 ):
-    """
-    Get all conversations across all users (admin endpoint).
+    """Get all conversations across all users (admin endpoint).
 
     Returns conversations with user info, channel type, and last message preview.
     Supports cursor-based pagination for infinite scroll.
-
-    Args:
-        limit: Maximum number of conversations to return (1-100, default 50)
-        cursor: Conversation UUID to start after (for pagination)
     """
     conversations, next_cursor, has_more = await service.get_all_conversations(
         limit=limit,
@@ -75,14 +70,10 @@ async def get_conversation_messages(
     query: ConversationMessagesQuery,
     service: MessagingServiceDep,
 ):
-    """
-    Get messages for a conversation with formatted history.
+    """Get messages for a conversation with formatted history.
 
     Returns messages in conversation_history format with role, content, and timestamp.
     Supports pagination via before_message_id for loading older messages.
-
-    Note: POST method used (instead of GET) to support request body for complex
-    query parameters and enable schema-level validation.
     """
     conversation, messages, next_cursor = await service.get_conversation_messages(
         conversation_id=query.conversation_id,
@@ -93,7 +84,6 @@ async def get_conversation_messages(
         reverse=query.reverse,
     )
 
-    # Format as typed conversation history
     conversation_history = [
         MessageHistoryItem(
             role=serialize_enum(msg.sender_role),

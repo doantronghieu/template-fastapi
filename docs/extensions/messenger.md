@@ -51,14 +51,15 @@ User Message → Facebook → Webhook → FastAPI → Celery → LLM → Databas
 - `app/integrations/messenger/dependencies.py` - DI providers
 
 **Services**
-- `app/services/llm_service.py` - AI response generation with retry logic
+- `app/features/omni_channel/services/chat_service.py` - AI response generation with retry logic
+- `app/features/omni_channel/services/messaging_service.py` - User/conversation/message management
 - `app/services/rate_limiter/redis_rate_limiter.py` - Redis sliding window
 
 **Utilities**
 - `app/lib/utils/retry.py` - Async retry decorator with exponential backoff
 
 **Tasks**
-- `app/tasks/channel_tasks.py` - Celery message processing
+- `app/features/omni_channel/tasks/channel_tasks.py` - Celery message processing
 
 **Database** (existing tables)
 - `users` - Auto-created from channel interactions

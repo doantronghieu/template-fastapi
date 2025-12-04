@@ -13,8 +13,8 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import SessionDep
-from app.models import MessageSenderRole
-from app.services.messaging_service import MessagingService
+from app.features.omni_channel.models import MessageSenderRole
+from app.features.omni_channel.services import MessagingService
 
 from ..client import MessengerClient
 from ..dependencies import get_messenger_client

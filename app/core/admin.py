@@ -1,13 +1,15 @@
 """SQLAdmin Interface Configuration.
 
-Auto-discovers ModelView classes from app.admin.views and extension modules.
+Auto-discovers ModelView classes from app.admin.views, app.features/*/admin, and extensions.
 Access at http://127.0.0.1:8000/admin (uses sync_engine).
 
 See docs/tech-stack.md for SQLAdmin auto-discovery and template loading details.
 See docs/guides/development.md for adding admin views.
 """
 
+import importlib
 import inspect
+import logging
 from pathlib import Path
 
 from jinja2 import ChoiceLoader, FileSystemLoader, PackageLoader
@@ -17,6 +19,47 @@ from app.admin import views
 from app.core.config import settings
 from app.core.database import sync_engine
 from app.extensions import load_extensions
+
+logger = logging.getLogger(__name__)
+
+
+def _load_feature_admin_views(admin: Admin) -> None:
+    """Auto-discover and register admin views from features.
+
+    Scans app/features/*/admin/ for ModelView subclasses.
+    """
+    features_path = Path(__file__).parent.parent / "features"
+
+    if not features_path.exists():
+        return
+
+    for feature_dir in features_path.iterdir():
+        if not feature_dir.is_dir() or feature_dir.name.startswith("_"):
+            continue
+
+        admin_package = feature_dir / "admin" / "__init__.py"
+        admin_file = feature_dir / "admin.py"
+
+        if not admin_package.exists() and not admin_file.exists():
+            continue
+
+        module_name = f"app.features.{feature_dir.name}.admin"
+
+        try:
+            module = importlib.import_module(module_name)
+
+            for name, obj in inspect.getmembers(module, inspect.isclass):
+                if (
+                    issubclass(obj, ModelView)
+                    and obj is not ModelView
+                    and hasattr(obj, "model")
+                    and obj.model is not None
+                ):
+                    admin.add_view(obj)
+                    logger.debug(f"Loaded feature admin view: {name}")
+
+        except Exception as e:
+            logger.warning(f"Failed to load feature admin {module_name}: {e}")
 
 
 def setup_admin(app) -> Admin:
@@ -54,6 +97,9 @@ def setup_admin(app) -> Admin:
             and obj.model is not None
         ):
             admin.add_view(obj)
+
+    # Load feature admin views
+    _load_feature_admin_views(admin)
 
     # Load extension admin views
     load_extensions("admin", admin)

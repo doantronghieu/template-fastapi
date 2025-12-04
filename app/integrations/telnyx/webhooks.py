@@ -19,7 +19,7 @@ async def handle_call_webhook(
     request: Request,
     db_session: AsyncSession = Depends(get_session),
 ) -> dict:
-    """Handle Telnyx call events. """
+    """Handle Telnyx call events."""
     payload = await request.json()
 
     try:

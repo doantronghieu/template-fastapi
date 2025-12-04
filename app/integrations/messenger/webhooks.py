@@ -8,8 +8,8 @@ import logging
 
 from fastapi import APIRouter, Header, HTTPException, Query, Request
 
+from app.features.omni_channel.tasks import process_messenger_message
 from app.services.rate_limiter import RateLimiterDep
-from app.tasks.channel_tasks import process_messenger_message
 
 from .config import messenger_settings
 from .dependencies import MessengerClientDep

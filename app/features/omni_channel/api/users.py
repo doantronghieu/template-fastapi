@@ -6,14 +6,15 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.dependencies import PaginationParams
-from app.schemas.user import (
+from app.services import PaginatedResponse, PaginationType
+
+from ..schemas import (
     UserCreate,
     UserDetailResponse,
     UserFullResponse,
     UserUpdate,
 )
-from app.services import PaginatedResponse, PaginationType
-from app.services.user_service import UserServiceDep
+from ..services import UserServiceDep
 
 router = APIRouter()
 
