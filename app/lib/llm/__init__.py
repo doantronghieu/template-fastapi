@@ -13,6 +13,7 @@ from app.lib.llm.config import (
     get_provider_for_model,
 )
 from app.lib.llm.dependencies import LLMProviderDep, get_llm_provider
+from app.lib.llm.resources import create_loader
 from app.lib.llm.schemas import CreateModelRequest, InvokeModelRequest
 
 __all__ = [
@@ -30,4 +31,6 @@ __all__ = [
     # Schemas
     "CreateModelRequest",
     "InvokeModelRequest",
+    # Resources
+    "create_loader",
 ]
