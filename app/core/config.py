@@ -88,6 +88,11 @@ class Settings(BaseSettings):
     # Google Generative AI
     GOOGLE_API_KEY: str = Field(..., description="Google API key for Gemini models")
 
+    # OpenRouter
+    OPENROUTER_API_KEY: str = Field(
+        default="", description="OpenRouter API key for unified model access"
+    )
+
     # Extensions
     ENABLED_EXTENSIONS: str | list[str] = Field(
         default="",

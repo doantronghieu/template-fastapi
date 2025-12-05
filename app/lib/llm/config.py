@@ -19,6 +19,7 @@ class ModelProvider(str, Enum):
     OPENAI = "openai"
     GROQ = "groq"
     GOOGLE = "google_genai"
+    OPENROUTER = "openrouter"
 
 
 class Model(str, Enum):
@@ -36,6 +37,10 @@ class Model(str, Enum):
     # Google Gemini models
     GEMINI_2_5_PRO = "gemini-2.5-pro"
     GEMINI_2_5_FLASH = "gemini-2.5-flash"
+
+    # Unified model IDs: org/model
+    GROK_4_1_FAST_UID = "x-ai/grok-4.1-fast"
+    GEMINI_2_5_PRO_UID = "google/gemini-2.5-pro"
 
 
 class InvocationMode(str, Enum):
@@ -55,6 +60,8 @@ MODEL_PROVIDER_MAP: dict[Model, ModelProvider] = {
     Model.GPT_OSS_20B: ModelProvider.GROQ,
     Model.GEMINI_2_5_PRO: ModelProvider.GOOGLE,
     Model.GEMINI_2_5_FLASH: ModelProvider.GOOGLE,
+    Model.GROK_4_1_FAST_UID: ModelProvider.OPENROUTER,
+    Model.GEMINI_2_5_PRO_UID: ModelProvider.OPENROUTER,
 }
 
 

@@ -9,10 +9,15 @@ from typing import Annotated
 import httpx
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseChatModel
+from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
 
+from app.core.config import settings
 from app.lib.llm.base import LLMProvider
 from app.lib.llm.config import InvocationMode, Model, ModelProvider
+
+# OpenRouter configuration
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 
 class LangChainLLMProvider(LLMProvider):
@@ -39,19 +44,30 @@ class LangChainLLMProvider(LLMProvider):
             else model_provider
         )
 
-        # httpx config for Celery compatibility - force connection close after each request
+        # Force connection close after each request
         http_client = httpx.AsyncClient(
             limits=httpx.Limits(max_connections=1, max_keepalive_connections=0),
             timeout=httpx.Timeout(60.0),
         )
 
-        chat_model: BaseChatModel = init_chat_model(
-            model=model_value,
-            model_provider=provider_value,
-            temperature=temperature,
-            http_async_client=http_client,
-            **kwargs,
-        )
+        # OpenRouter uses ChatOpenAI with custom base_url
+        if provider_value == ModelProvider.OPENROUTER.value:
+            chat_model = ChatOpenAI(
+                model=model_value,
+                api_key=settings.OPENROUTER_API_KEY,
+                base_url=OPENROUTER_BASE_URL,
+                temperature=temperature,
+                http_async_client=http_client,
+                **kwargs,
+            )
+        else:
+            chat_model = init_chat_model(
+                model=model_value,
+                model_provider=provider_value,
+                temperature=temperature,
+                http_async_client=http_client,
+                **kwargs,
+            )
 
         if tools:
             chat_model = chat_model.bind_tools(tools)
