@@ -41,6 +41,7 @@ class Model(str, Enum):
     # Unified model IDs: org/model
     GROK_4_1_FAST_UID = "x-ai/grok-4.1-fast"
     GEMINI_2_5_PRO_UID = "google/gemini-2.5-pro"
+    GEMINI_2_5_FLASH_UID = "google/gemini-2.5-flash"
 
 
 class InvocationMode(str, Enum):
@@ -62,6 +63,7 @@ MODEL_PROVIDER_MAP: dict[Model, ModelProvider] = {
     Model.GEMINI_2_5_FLASH: ModelProvider.GOOGLE,
     Model.GROK_4_1_FAST_UID: ModelProvider.OPENROUTER,
     Model.GEMINI_2_5_PRO_UID: ModelProvider.OPENROUTER,
+    Model.GEMINI_2_5_FLASH_UID: ModelProvider.OPENROUTER,
 }
 
 

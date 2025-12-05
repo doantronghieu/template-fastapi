@@ -47,7 +47,7 @@ class LangChainLLMProvider(LLMProvider):
         # Force connection close after each request
         http_client = httpx.AsyncClient(
             limits=httpx.Limits(max_connections=1, max_keepalive_connections=0),
-            timeout=httpx.Timeout(60.0),
+            timeout=httpx.Timeout(300.0),
         )
 
         # OpenRouter uses ChatOpenAI with custom base_url
