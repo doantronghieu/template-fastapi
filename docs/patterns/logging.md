@@ -11,7 +11,7 @@ This document describes logging strategies and error handling patterns.
 ## Task ID Context Pattern
 
 - Automatic task ID binding via Celery signals (`task_prerun`/`task_postrun`) in `app/core/celery.py`
-- Task ID stored in `ContextVar` from `app/core/task_context.py` (avoids circular imports)
+- Task ID stored in `ContextVar` in `app/core/celery.py` (co-located with signals)
 - Use `get_task_id()` helper in log messages: `logger.info(f"{get_task_id()}Processing...")`
 - Task ID prefix format: `[b83caca6] ` (first 8 characters)
 - No manual wrapping needed - signals automatically bind/unbind for every task

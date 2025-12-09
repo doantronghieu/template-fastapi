@@ -1,49 +1,25 @@
 # Library Architecture Pattern
 
-Organization strategy for integrating third-party libraries with pluggable provider support via the Strategy pattern.
+Implementation patterns for provider-agnostic abstractions via Strategy pattern.
 
-## Architecture Overview
+## Two-Layer Architecture
 
-**Two-layer structure:**
-
-1. **Abstractions** (`app/lib/{capability}/`) - Protocol definitions, factory, dependencies
-2. **Implementations** (`app/integrations/{library}/`) - Concrete provider implementations
-
-**Directory structure:**
-```
-app/lib/{capability}/           # Abstraction layer
-├── base.py                     # Protocol or ABC definition
-├── config.py                   # Provider type enums
-├── factory.py                  # Provider selection factory
-├── dependencies.py             # FastAPI DI
-├── schemas.py                  # Shared schemas (optional)
-├── api.py                      # Provider-agnostic endpoints (optional)
-└── cli.py                      # CLI tool (optional)
-
-app/integrations/{library}/     # Implementation layer
-├── __init__.py                 # setup_api(), setup_webhooks() hooks
-├── {capability}.py             # Provider implementation (or provider.py)
-├── config.py                   # Library-specific settings
-├── client.py                   # SDK wrapper/singleton (optional)
-├── schemas.py                  # Library-specific types (optional)
-├── api.py                      # Library-specific endpoints (optional)
-├── webhooks.py                 # Webhook handlers (optional)
-├── dependencies.py             # Library-specific DI (optional)
-└── services/                   # Complex business logic (optional)
-```
+| Layer | Location | Purpose |
+|-------|----------|---------|
+| Abstraction | `app/lib/{capability}/` | Protocol definitions, factory, dependencies |
+| Implementation | `app/integrations/{provider}/` | Concrete provider implementations |
 
 ## Decision Criteria
 
-**Create abstraction** in `app/lib/{capability}/` when:
+**Create abstraction** (`app/lib/`) when:
 - Multiple providers offer same functionality
-- Runtime provider switching needed via configuration
-- Interface relatively standardized across providers
+- Runtime provider switching needed via config
 - Business logic should be provider-agnostic
 
-**Skip abstraction** (keep in `app/integrations/{library}/` only) when:
-- Feature unique to one library with no equivalent elsewhere
-- Tightly coupled to library-specific patterns
-- Abstraction would be premature or forced
+**Skip abstraction** (keep in `app/integrations/` only) when:
+- Feature unique to one provider
+- Tightly coupled to provider-specific patterns
+- Abstraction would be premature
 
 ## Protocol vs ABC
 
@@ -52,17 +28,18 @@ app/integrations/{library}/     # Implementation layer
 | `Protocol` | Pure interface, duck typing, no shared code |
 | `ABC` | Shared utilities needed across implementations |
 
-## Provider Implementation Pattern
+## Naming Conventions
 
-**Naming conventions:**
-- Protocol/ABC: `{Capability}Provider`
-- Implementation: `{Library}{Capability}Provider`
-- Provider file: `{capability}.py` or `provider.py`
+| Component | Pattern | Example |
+|-----------|---------|---------|
+| Protocol/ABC | `{Capability}Provider` | `LLMProvider` |
+| Implementation | `{Library}{Capability}Provider` | `LangChainLLMProvider` |
+| Provider file | `{capability}.py` | `llm.py` |
 
-**Factory with lazy imports:**
+## Factory Pattern
+
 ```python
 # app/lib/{capability}/factory.py
-from collections.abc import Callable
 from functools import lru_cache
 
 @lru_cache(maxsize=1)
@@ -77,10 +54,12 @@ def _get_{library}_provider() -> {Capability}Provider:
     return {Library}{Capability}Provider()
 ```
 
-**Dependency injection:**
-- Pattern: provider function returns instance, type alias for injection
-- Use `TYPE_CHECKING` guard to avoid circular imports
-- Inject in endpoints via type alias parameter
+**Key points:**
+- `@lru_cache` for singleton behavior
+- Lazy imports in helper functions to avoid circular deps
+- Config-driven provider selection
+
+## Dependency Injection
 
 ```python
 # app/lib/{capability}/dependencies.py
@@ -97,18 +76,17 @@ def get_{capability}_provider() -> "{Capability}Provider":
 {Capability}ProviderDep = Annotated["{Capability}Provider", Depends(get_{capability}_provider)]
 ```
 
+**Key points:**
+- `TYPE_CHECKING` guard avoids circular imports
+- Type alias (`{Capability}ProviderDep`) for clean endpoint signatures
+- Enables testing/mocking via FastAPI's dependency override
+
 ## API Organization
 
-**Two locations for `api.py`:**
-
-| Location | Use When | Route Pattern |
-|----------|----------|---------------|
-| `app/lib/{capability}/api.py` | Provider-agnostic endpoints | `/api/lib/{capability}/{endpoint}` |
-| `app/integrations/{library}/api.py` | Library-specific endpoints | `/api/integrations/{library}/{endpoint}` |
-
-**Auto-discovery:**
-- `app/api/lib/__init__.py` scans `app/lib/*/api.py`
-- `app/integrations/` uses `setup_api()` hook in `__init__.py`
+| Location | Use Case |
+|----------|----------|
+| `app/lib/{capability}/router.py` | Provider-agnostic endpoints |
+| `app/integrations/{provider}/router.py` | Provider-specific endpoints |
 
 ## Best Practices
 
@@ -117,14 +95,3 @@ def get_{capability}_provider() -> "{Capability}Provider":
 3. **Configuration-driven** - Settings determine implementation at runtime
 4. **Dependency injection** - FastAPI `Depends()` enables testing/mocking
 5. **Integration isolation** - Each provider in own package with own config
-6. **Flat structure** - Avoid deep nesting
-
-## Relationship with Features
-
-```
-app/lib/{capability}/           # Interfaces + factories
-app/integrations/{library}/     # Implementations
-app/features/{domain}/          # Business logic using lib/ interfaces
-```
-
-Features consume lib/ interfaces via dependency injection, remaining provider-agnostic.
