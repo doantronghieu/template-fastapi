@@ -1,10 +1,10 @@
 # Development Patterns
 
-This document describes common development workflows and coding patterns.
+Common development workflows and coding patterns.
 
 ## Type Hints & Documentation
 
-**Principle**: Replace docstring parameter descriptions with `Annotated[Type, "description"]`. Self-explanatory parameters stay clean. Docstrings describe only function purpose—no param/return lists.
+**Principle**: Replace docstring parameter descriptions with `Annotated[{Type}, "{description}"]`. Self-explanatory parameters stay clean. Docstrings describe only function purpose—no param/return lists.
 
 **Applies to**: Input parameters. Returns use standard type hints.
 
@@ -31,39 +31,44 @@ This document describes common development workflows and coding patterns.
 
 ## Adding New Model
 
-1. Create SQLModel class in `app/models/your_model.py` with `table=True` and explicit `__tablename__`
-2. Generate migration: `make db-migrate message="add your_table"`
+1. Create SQLModel class in `app/models/{model}.py` with `table=True` and explicit `__tablename__`
+2. Generate migration: `make db-migrate message="add {table}"`
 3. Apply migration: `make db-upgrade`
 
 ## Adding New Service
-- Create class in `app/services/your_service.py` with business logic
+
+- Create class in `app/services/{service}.py` with business logic
 - Add provider function returning service instance
-- Create type alias: `YourServiceDep = Annotated[YourService, Depends(get_your_service)]`
-- Export in `__init__.py`: `from .your_service import YourService, YourServiceDep, get_service` + `__all__` list
+- Create type alias: `{Service}Dep = Annotated[{Service}, Depends(get_{service})]`
+- Export in `__init__.py`: `from .{service} import {Service}, {Service}Dep, get_{service}` + `__all__` list
 
 ## Adding New API Endpoint
-- Create `APIRouter` in `app/api/your_endpoints.py` with route handlers
+
+- Create `APIRouter` in `app/api/{endpoints}.py` with route handlers
 - Import `APITag` from `app.core.openapi_tags` for type-safe tag usage
-- Include in `app/api/router.py`: `api_router.include_router(your_endpoints.router, tags=[APITag.YOUR_TAG])`
-- Inject services via type alias: `async def endpoint(service: YourServiceDep)`
+- Include in `app/api/router.py`: `api_router.include_router({endpoints}.router, tags=[APITag.{TAG}])`
+- Inject services via type alias: `async def endpoint(service: {Service}Dep)`
 - Return SQLModel instances or Pydantic schemas
 - If adding new tag: Define in `APITag` enum and `TAG_METADATA` in `app/core/openapi_tags.py`
 
 ## Adding Template Page
-- Create template in `templates/your_page.html` extending `base.html`
+
+- Create template in `templates/{page}.html` extending `base.html`
 - Override blocks: `{% block title %}`, `{% block content %}`
-- Add route in `app/api/pages.py` returning `templates.TemplateResponse("your_page.html", {"request": request})`
+- Add route in `app/api/pages.py` returning `templates.TemplateResponse("{page}.html", {"request": request})`
 - Set `include_in_schema=False` on route decorator
 
 ## Adding Celery Task
-- Create task in `app/tasks/your_tasks.py` with `@celery_app.task(name=f"{settings.CELERY_TASKS_MODULE}.task_name")`
+
+- Create task in `app/tasks/{tasks}.py` with `@celery_app.task(name=f"{settings.CELERY_TASKS_MODULE}.{task_name}")`
 - Add `auto_import(__file__, "app.tasks")` to `tasks/__init__.py`
-- Trigger: `task_function.delay(*args)` or `.apply_async()` for options
+- Trigger: `{task_name}.delay(*args)` or `.apply_async()` for options
 
 ## Adding Extension Beat Schedule
+
 - Create `tasks/schedules.py` in extension directory with `SCHEDULES` dictionary
 - Define schedules using `crontab()` expressions from `celery.schedules`
-- Schedule keys automatically prefixed with extension name to prevent conflicts (e.g., `hotel.daily-task`)
+- Schedule keys automatically prefixed with extension name to prevent conflicts (e.g., `{extension}.{schedule}`)
 - Schedules execute in timezone configured by `CELERY_TIMEZONE` setting
 - No core code changes needed - auto-discovered at startup from enabled extensions
 - View registered schedules in Flower UI or Redis with `redbeat:*` key pattern
@@ -72,7 +77,7 @@ This document describes common development workflows and coding patterns.
 ## Adding Admin View
 
 **Basic configuration:**
-- Create `ModelView` subclass in `app/admin/views.py` with `model=YourModel` - auto-registered
+- Create `ModelView` subclass in `app/admin/views.py` with `model={Model}` - auto-registered
 - Set display name, icon, column lists for list/form/detail pages, search fields, sortable columns
 
 **File organization:**
@@ -95,11 +100,13 @@ This document describes common development workflows and coding patterns.
 - Supports multiple filters combining with query parameters
 
 ## Package Exports
-- **Models/Services/Schemas**: Explicit imports + `__all__ = ["YourClass"]`
+
+- **Models/Services/Schemas**: Explicit imports + `__all__ = ["{Class}"]`
 - **Tasks**: `auto_import(__file__, "app.tasks")` for Celery registration
 - **Private**: Prefix with `_` to exclude
 
 ## TypeScript Client
+
 - Run `make client-generate` for TypeScript client in `./client/` with full type safety
 
 ## Adding Library Integration
@@ -118,7 +125,7 @@ This document describes common development workflows and coding patterns.
 
 ## Adding External Integration
 
-**Directory structure** for third-party services (Messenger, Slack, Twilio):
+**Directory structure** for third-party services:
 ```
 app/integrations/{service}/
 ├── types.py         # TypedDict for external API structures

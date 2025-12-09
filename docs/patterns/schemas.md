@@ -1,14 +1,14 @@
 # Schema and Model Patterns
 
-This document describes patterns for organizing and implementing schemas and models.
+Patterns for organizing and implementing schemas and models.
 
 ## Schema Location and Organization
 
 **Principle**: Schemas belong in `app/schemas/` from the start for reusability and separation of concerns.
 
 **Location Rules**:
-- **Request/Response schemas**: Always in `app/schemas/{module}.py` (e.g., `app/schemas/messenger.py`)
-- **Flat structure**: Use `app/schemas/messenger.py`, not nested `app/schemas/integration/messenger.py`
+- **Request/Response schemas**: Always in `app/schemas/{module}.py`
+- **Flat structure**: Use `app/schemas/{module}.py`, not nested `app/schemas/{category}/{module}.py`
 - **API endpoints**: Import schemas, focus purely on HTTP handling
 
 **Reasoning**:
@@ -35,21 +35,21 @@ This document describes patterns for organizing and implementing schemas and mod
 
 **Targets**: All methods/functions that currently have Args/Returns in docstring.
 
-**TypedDict fields**: Use `Annotated[Type, "description"]` for field-level documentation. Provides context without runtime overhead.
+**TypedDict fields**: Use `Annotated[{Type}, "{description}"]` for field-level documentation. Provides context without runtime overhead.
 
 ```python
-Id: Annotated[str, "Record ID"]
+{field}: Annotated[str, "{description}"]
 ```
 
 **Pydantic fields**: Use `Field(description="...")` for field documentation. Descriptions appear in OpenAPI/Swagger docs automatically.
 
 ```python
-id: str = Field(alias="Id", description="Record ID")
+{field}: str = Field(alias="{Alias}", description="{description}")
 ```
 
 **Guidelines**:
 - Document non-obvious fields
-- Skip documentation for self-explanatory fields 
+- Skip documentation for self-explanatory fields
 - Keep descriptions concise but still informative, have enough information for understanding
 - For Pydantic, combine with other Field parameters
 
@@ -71,7 +71,12 @@ id: str = Field(alias="Id", description="Record ID")
 
 **Principle**: Centralize common columns/metadata in `BaseTable` to eliminate repetition.
 
-**Pattern**: Use multiple inheritance with order `DomainBase, BaseTable, table=True`. Domain base provides business fields, BaseTable provides common metadata, concrete model defines table-specific configuration. Example: `class Entity(EntityBase, BaseTable, table=True)`
+**Pattern**: Use multiple inheritance with order `{Model}Base, BaseTable, table=True`. Domain base provides business fields, BaseTable provides common metadata, concrete model defines table-specific configuration.
+
+```python
+class {Model}({Model}Base, BaseTable, table=True):
+    __tablename__ = "{table_name}"
+```
 
 ## Multiple Inheritance for Schema Composition
 
@@ -87,7 +92,7 @@ id: str = Field(alias="Id", description="Record ID")
 
 **Principle**: Add validation without duplicating field definitions using Pydantic decorators.
 
-- Use `@field_validator("field_name")` decorator to add validation to inherited fields
+- Use `@field_validator("{field}")` decorator to add validation to inherited fields
 - Use `@model_validator(mode="after")` for cross-field validation logic
 - Avoid redefining fields in child schemas unless adding new constraints
 - Similar to Zod's `.refine()` method - extend behavior without duplication
@@ -99,7 +104,7 @@ id: str = Field(alias="Id", description="Record ID")
 
 - **Override when needed**: Adding `index=True`, `unique=True`, `sa_column=Column(...)`, etc. or relationship configs
 - **Don't override unnecessarily**: If field definition is identical to parent, don't redefine
-- **Always add inline comment**: Explain why override is needed (e.g., "# Override to add unique constraint")
+- **Always add inline comment**: Explain why override is needed (e.g., `# Override to add unique constraint`)
 - **Accept trade-off**: Field descriptions may be lost when overriding (SQLModel limitation)
 
 ## POST Method for Complex Queries
@@ -129,10 +134,8 @@ id: str = Field(alias="Id", description="Record ID")
 **Co-location Strategy**:
 - **Domain bases with models**: Keep base classes in same file as table models (`app/models/`)
   - Reason: Domain-specific, used by table models and response schemas
-  - Example: Entity base next to entity table definition
 - **Schema bases with schemas**: Keep API-specific bases in same file as request/response schemas (`app/schemas/`)
   - Reason: Only used by API schemas, not domain models
-  - Example: Query parameter bases, external integration bases
   - Improves discoverability when working on API layer
 
 **Avoid**: Creating separate `bases.py` files unless bases are truly shared across many unrelated modules.
