@@ -1,141 +1,173 @@
 # Schema and Model Patterns
 
-Patterns for organizing and implementing schemas and models.
+This guide establishes patterns for organizing schemas and models, ensuring consistency, reusability, and clear separation of concerns.
 
-## Schema Location and Organization
+---
 
-**Principle**: Schemas belong in `app/schemas/` from the start for reusability and separation of concerns.
+## Schema Organization
 
-**Location Rules**:
-- **Request/Response schemas**: Always in `app/schemas/{module}.py`
-- **Flat structure**: Use `app/schemas/{module}.py`, not nested `app/schemas/{category}/{module}.py`
-- **API endpoints**: Import schemas, focus purely on HTTP handling
+### Location
 
-**Reasoning**:
+All request and response schemas belong in `app/schemas/{module}.py`. Use a flat structure—avoid nested directories like `app/schemas/{category}/{module}.py`.
+
+Define schemas in `app/schemas/` first, then import them into API endpoints. API files should focus purely on HTTP handling—never define schemas inline.
+
+### Rationale
+
 - Schemas become immediately reusable across API modules, services, and background tasks
-- Clear separation: API layer handles requests/responses, schemas handle validation
-- Consistency with project pattern where `app/schemas/` is single source of truth
-- Avoids refactoring cost of extracting schemas later when reuse is needed
+- Clear separation of concerns: the API layer handles requests/responses; schemas handle validation
+- Eliminates refactoring costs when reuse is needed later
 
-**Pattern**: Define schemas in `app/schemas/` first, then import into API endpoints - never define schemas inline in API files.
+---
 
-## TypedDict vs Pydantic Schemas
+## Type System Selection
 
-**Principle**: Use TypedDict for external API type hints without validation, Pydantic for internal API validation.
+### TypedDict
 
-**TypedDict** (`types.py` in integration/library dirs): Runtime type hints for external API structures (webhooks, SDK responses) without validation overhead. Provides IDE autocomplete and type safety at zero cost.
+Use TypedDict for external API type hints (webhooks, SDK responses) when validation is unnecessary. Place these in `types.py` within integration or library directories.
 
-**Pydantic** (`app/schemas/`): Request/response validation for our FastAPI endpoints with field constraints and automatic OpenAPI documentation. External APIs validate their own payloads - we validate untrusted user input to our endpoints.
+TypedDict provides IDE autocomplete and type safety with zero runtime overhead. External APIs validate their own payloads—we don't need to re-validate them.
 
-**Pattern**: Clients use TypedDict for external API calls, endpoints use Pydantic for request validation.
+### Pydantic
 
-## Type Hints & Field Documentation
+Use Pydantic for request/response validation on FastAPI endpoints. Place these in `app/schemas/`.
 
-**Principle**: Replace docstring parameter descriptions with inline type annotations. Docstrings describe only function/class purpose—no param/return lists.
+Pydantic enforces field constraints and generates OpenAPI documentation automatically. Use it to validate untrusted user input to our endpoints.
 
-**Targets**: All methods/functions that currently have Args/Returns in docstring.
+**Summary**: Clients use TypedDict for external API calls; endpoints use Pydantic for request validation.
 
-**TypedDict fields**: Use `Annotated[{Type}, "{description}"]` for field-level documentation. Provides context without runtime overhead.
+---
 
-```python
-{field}: Annotated[str, "{description}"]
-```
+## Field Documentation
 
-**Pydantic fields**: Use `Field(description="...")` for field documentation. Descriptions appear in OpenAPI/Swagger docs automatically.
+Replace docstring parameter descriptions with inline type annotations. Docstrings should describe only the function or class purpose—omit `Args` and `Returns` sections.
 
-```python
-{field}: str = Field(alias="{Alias}", description="{description}")
-```
+**Targets**: All methods and functions that currently have `Args` or `Returns` in their docstrings.
 
-**Guidelines**:
-- Document non-obvious fields
-- Skip documentation for self-explanatory fields
-- Keep descriptions concise but still informative, have enough information for understanding
-- For Pydantic, combine with other Field parameters
+### TypedDict Fields
 
-## SQLModel Base Pattern ("Fat Models")
-
-**Principle**: Single source of truth for field definitions with descriptions in base classes.
-
-- **Domain model bases** define core business fields with Field descriptions
-  - Create base class inheriting from `SQLModel` with shared fields
-  - Located in `app/models/` alongside table models
-  - Table model inherits from base with `table=True` parameter
-  - Response schemas inherit from same base for field reuse
-- **Schema-specific bases** define API/request-specific concerns
-  - Co-located with schemas in same file for discoverability
-  - Used only by request/response schemas, never by table models
-  - Group related optional parameters (e.g., external channel fields, internal UUID fields)
-
-## BaseTable Pattern for Common Metadata
-
-**Principle**: Centralize common columns/metadata in `BaseTable` to eliminate repetition.
-
-**Pattern**: Use multiple inheritance with order `{Model}Base, BaseTable, table=True`. Domain base provides business fields, BaseTable provides common metadata, concrete model defines table-specific configuration.
+Use `Annotated` for field-level documentation:
 
 ```python
-class {Model}({Model}Base, BaseTable, table=True):
-    __tablename__ = "{table_name}"
+field_name: Annotated[str, "Description of the field"]
 ```
 
-## Multiple Inheritance for Schema Composition
+### Pydantic Fields
 
-**Principle**: Compose schemas from multiple base classes (similar to Zod's `.merge()` or TypeScript intersection types).
+Use `Field(description=...)` for documentation that appears in OpenAPI/Swagger:
 
-- Inherit from multiple base classes to combine different field groups
-- Python MRO (Method Resolution Order) applies left-to-right priority for conflicts
-- Enables maximum reusability through composition
+```python
+field_name: str = Field(alias="FieldName", description="Description of the field")
+```
+
+### Guidelines
+
+- Document non-obvious fields; skip self-explanatory ones
+- Keep descriptions concise but informative
+- For Pydantic, combine descriptions with other `Field` parameters as needed
+
+---
+
+## Model Architecture
+
+### SQLModel Base Pattern
+
+Establish a single source of truth for field definitions using base classes with `Field` descriptions.
+
+**Domain model bases** define core business fields:
+- Create a base class inheriting from `SQLModel` with shared fields
+- Locate in `app/models/` alongside table models
+- Table models inherit from the base with `table=True`
+- Response schemas inherit from the same base for field reuse
+
+**Schema-specific bases** define API concerns:
+- Co-locate with schemas in `app/schemas/` for discoverability
+- Used only by request/response schemas, never by table models
+- Group related optional parameters (e.g., external channel fields, internal UUID fields)
+
+### BaseTable for Common Metadata
+
+Centralize common columns in a `BaseTable` class to eliminate repetition.
+
+Use multiple inheritance with this order: `{Model}Base, BaseTable, table=True`. The domain base provides business fields, `BaseTable` provides metadata, and the concrete model defines table-specific configuration.
+
+```python
+class MyModel(MyModelBase, BaseTable, table=True):
+    __tablename__ = "my_table"
+```
+
+### Schema Composition via Multiple Inheritance
+
+Compose schemas from multiple base classes (similar to Zod's `.merge()` or TypeScript intersection types):
+
+- Combine different field groups through multiple inheritance
+- Python's MRO applies left-to-right priority for conflicts
 - Separate concerns: domain fields, API-specific fields, internal fields, authentication fields
-- Request schemas combine all necessary bases without field redefinition
+- Request schemas combine necessary bases without field redefinition
 
-## Field Validators Over Redefinition
+---
 
-**Principle**: Add validation without duplicating field definitions using Pydantic decorators.
+## Field Customization
 
-- Use `@field_validator("{field}")` decorator to add validation to inherited fields
-- Use `@model_validator(mode="after")` for cross-field validation logic
-- Avoid redefining fields in child schemas unless adding new constraints
-- Similar to Zod's `.refine()` method - extend behavior without duplication
-- Validator method receives value, performs checks, raises ValueError or returns processed value
+### Validators Over Redefinition
 
-## Field Override Guidelines
+Add validation to inherited fields without duplicating definitions (similar to Zod's `.refine()`):
 
-**Principle**: Only override inherited fields when adding database-specific configurations.
+- Use `@field_validator("field_name")` for single-field validation
+- Use `@model_validator(mode="after")` for cross-field validation
+- Avoid redefining fields unless adding new constraints
+- Validators receive values, perform checks, and raise `ValueError` or return processed values
 
-- **Override when needed**: Adding `index=True`, `unique=True`, `sa_column=Column(...)`, etc. or relationship configs
-- **Don't override unnecessarily**: If field definition is identical to parent, don't redefine
-- **Always add inline comment**: Explain why override is needed (e.g., `# Override to add unique constraint`)
-- **Accept trade-off**: Field descriptions may be lost when overriding (SQLModel limitation)
+### Field Override Guidelines
 
-## POST Method for Complex Queries
+Override inherited fields only when adding database-specific configurations:
 
-**Principle**: Use POST with request body (instead of GET with query params) to enable schema-level validation.
+| Override | Don't Override |
+|----------|----------------|
+| Adding `index=True`, `unique=True` | Identical field definitions |
+| Adding `sa_column=Column(...)` | Fields without new constraints |
+| Configuring relationships | |
 
-- **Problem**: GET with `Depends()` instantiates schema with default None values before validation
-- **Solution**: Use POST method with request body parameter (no `Depends()`)
-- **Benefit**: Pydantic validators run on complete payload, enabling `@model_validator` cross-field checks
-- **Documentation**: Add note in endpoint docstring explaining POST usage for validation
-- **Pattern**: Common for complex query endpoints requiring "at least one of" logic
+When overriding, always include an inline comment explaining why (e.g., `# Override to add unique constraint`). Note that field descriptions may be lost when overriding due to SQLModel limitations.
 
-## Schema Validation Best Practices
+---
 
-**Validation Location Priority**:
-1. **Pydantic `@field_validator`** - Single-field validation rules (preferred)
-2. **Pydantic `@model_validator`** - Cross-field validation (requires POST request body)
-3. **API layer** - Only when Pydantic validation isn't feasible
+## Validation Strategy
 
-**When validation must stay at API layer**:
-- GET endpoints with query parameters using `Depends()` (can't use `@model_validator`)
+### Validation Location Priority
+
+1. **Pydantic `@field_validator`** — Single-field rules (preferred)
+2. **Pydantic `@model_validator`** — Cross-field validation (requires POST with request body)
+3. **API layer** — Only when Pydantic validation isn't feasible
+
+### When to Validate at the API Layer
+
+- GET endpoints using `Depends()` (cannot use `@model_validator`)
 - Complex business logic requiring database queries or external service calls
-- Always add inline comment explaining why validation is at API layer
+- Always add an inline comment explaining why validation is at the API layer
 
-## Base Class Organization
+### POST for Complex Queries
 
-**Co-location Strategy**:
-- **Domain bases with models**: Keep base classes in same file as table models (`app/models/`)
-  - Reason: Domain-specific, used by table models and response schemas
-- **Schema bases with schemas**: Keep API-specific bases in same file as request/response schemas (`app/schemas/`)
-  - Reason: Only used by API schemas, not domain models
-  - Improves discoverability when working on API layer
+Use POST with a request body instead of GET with query parameters when schema-level validation is required.
 
-**Avoid**: Creating separate `bases.py` files unless bases are truly shared across many unrelated modules.
+**Problem**: GET with `Depends()` instantiates the schema with default `None` values before validation runs.
+
+**Solution**: POST with a request body (no `Depends()`) ensures Pydantic validators run on the complete payload, enabling `@model_validator` for cross-field checks.
+
+This pattern is common for complex query endpoints requiring "at least one of" validation logic. Document this choice in the endpoint docstring when applicable.
+
+---
+
+## File Organization
+
+### Co-location Strategy
+
+**Domain bases** → Keep in same file as table models (`app/models/`)
+- Used by table models and response schemas
+
+**Schema bases** → Keep in same file as request/response schemas (`app/schemas/`)
+- Used only by API schemas, improving discoverability
+
+### Avoid
+
+Creating separate `bases.py` files unless bases are genuinely shared across many unrelated modules.

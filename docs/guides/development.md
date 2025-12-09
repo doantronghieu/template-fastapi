@@ -1,131 +1,136 @@
 # Development Patterns
 
-Common development workflows and coding patterns.
+A guide to common workflows and coding conventions across the codebase.
 
-## Type Hints & Documentation
+---
 
-**Principle**: Replace docstring parameter descriptions with `Annotated[{Type}, "{description}"]`. Self-explanatory parameters stay clean. Docstrings describe only function purpose—no param/return lists.
+## Core Principles
 
-**Applies to**: Input parameters. Returns use standard type hints.
+### Type Hints & Documentation
 
-## File Naming Conventions
+Use `Annotated[{Type}, "{description}"]` for input parameters that need explanation. Self-explanatory parameters remain unadorned. Docstrings describe only the function's purpose—omit parameter and return value lists. Return types use standard type hints.
 
-**Principle**: Name related files using consistent prefixes for discoverability and maintainability.
+### File Naming
 
-**Feature-based naming**:
-- Use shared prefix matching the feature or domain name
-- Apply pattern `{feature}_{type}.py` where type indicates file purpose (service, tasks, schemas, etc.)
-- Applies to: services, tasks, API endpoints, schemas, test, etc. files
-- Files sort together alphabetically, making feature boundaries clear
+Name related files with consistent prefixes using the pattern `{feature}_{type}.py`, where type indicates file purpose (service, tasks, schemas, etc.). This applies to services, tasks, API endpoints, schemas, and tests. Files sort together alphabetically, making feature boundaries clear and simplifying navigation.
 
-**Benefits**:
-- Quick visual grouping in file explorers
-- Immediate understanding of feature scope
-- Simplified navigation and refactoring
-- Clear boundaries between different features
+Centralize enums in dedicated `enums.py` files within model directories to prevent circular imports and maintain a single source of truth.
 
-**Enum organization**:
-- Centralize enums in dedicated `enums.py` within model directories
-- Prevents circular import issues
-- Provides single source of truth for type definitions
+### Package Exports
 
-## Adding New Model
+- **Models, Services, Schemas**: Use explicit imports with `__all__ = ["{Class}"]`
+- **Tasks**: Use `auto_import(__file__, "app.tasks")` for Celery registration
+- **Private members**: Prefix with `_` to exclude from exports
 
-1. Create SQLModel class in `app/models/{model}.py` with `table=True` and explicit `__tablename__`
+---
+
+## Database & Models
+
+### Adding a New Model
+
+1. Create a SQLModel class in `app/models/{model}.py` with `table=True` and explicit `__tablename__`
 2. Generate migration: `make db-migrate message="add {table}"`
 3. Apply migration: `make db-upgrade`
 
-## Adding New Service
+---
 
-- Create class in `app/services/{service}.py` with business logic
-- Add provider function returning service instance
-- Create type alias: `{Service}Dep = Annotated[{Service}, Depends(get_{service})]`
-- Export in `__init__.py`: `from .{service} import {Service}, {Service}Dep, get_{service}` + `__all__` list
+## Services & Dependencies
 
-## Adding New API Endpoint
+### Adding a New Service
 
-- Create `APIRouter` in `app/api/{endpoints}.py` with route handlers
-- Import `APITag` from `app.core.openapi_tags` for type-safe tag usage
-- Include in `app/api/router.py`: `api_router.include_router({endpoints}.router, tags=[APITag.{TAG}])`
-- Inject services via type alias: `async def endpoint(service: {Service}Dep)`
-- Return SQLModel instances or Pydantic schemas
-- If adding new tag: Define in `APITag` enum and `TAG_METADATA` in `app/core/openapi_tags.py`
+1. Create a class in `app/services/{service}.py` containing business logic
+2. Add a provider function that returns a service instance
+3. Create a type alias: `{Service}Dep = Annotated[{Service}, Depends(get_{service})]`
+4. Export in `__init__.py`: `from .{service} import {Service}, {Service}Dep, get_{service}` and update `__all__`
 
-## Adding Template Page
+---
 
-- Create template in `templates/{page}.html` extending `base.html`
-- Override blocks: `{% block title %}`, `{% block content %}`
-- Add route in `app/api/pages.py` returning `templates.TemplateResponse("{page}.html", {"request": request})`
-- Set `include_in_schema=False` on route decorator
+## API Development
 
-## Adding Celery Task
+### Adding an Endpoint
 
-- Create task in `app/tasks/{tasks}.py` with `@celery_app.task(name=f"{settings.CELERY_TASKS_MODULE}.{task_name}")`
-- Add `auto_import(__file__, "app.tasks")` to `tasks/__init__.py`
-- Trigger: `{task_name}.delay(*args)` or `.apply_async()` for options
+1. Create an `APIRouter` in `app/api/{endpoints}.py` with route handlers
+2. Import `APITag` from `app.core.openapi_tags` for type-safe tag usage
+3. Include in `app/api/router.py`: `api_router.include_router({endpoints}.router, tags=[APITag.{TAG}])`
+4. Inject services via type alias: `async def endpoint(service: {Service}Dep)`
+5. Return SQLModel instances or Pydantic schemas
+6. For new tags: define in `APITag` enum and `TAG_METADATA` in `app/core/openapi_tags.py`
 
-## Adding Extension Beat Schedule
+### Adding a Template Page
 
-- Create `tasks/schedules.py` in extension directory with `SCHEDULES` dictionary
-- Define schedules using `crontab()` expressions from `celery.schedules`
-- Schedule keys automatically prefixed with extension name to prevent conflicts (e.g., `{extension}.{schedule}`)
-- Schedules execute in timezone configured by `CELERY_TIMEZONE` setting
-- No core code changes needed - auto-discovered at startup from enabled extensions
-- View registered schedules in Flower UI or Redis with `redbeat:*` key pattern
-- Reference template in `app/extensions/_example/tasks/schedules.py` for format examples
+1. Create a template in `templates/{page}.html` extending `base.html`
+2. Override blocks: `{% block title %}`, `{% block content %}`
+3. Add a route in `app/api/pages.py` returning `templates.TemplateResponse("{page}.html", {"request": request})`
+4. Set `include_in_schema=False` on the route decorator
 
-## Adding Admin View
+### TypeScript Client Generation
+
+Run `make client-generate` to produce a TypeScript client in `./client/` with full type safety.
+
+---
+
+## Background Processing
+
+### Adding a Celery Task
+
+1. Create a task in `app/tasks/{tasks}.py` with `@celery_app.task(name=f"{settings.CELERY_TASKS_MODULE}.{task_name}")`
+2. Add `auto_import(__file__, "app.tasks")` to `tasks/__init__.py`
+3. Trigger with `{task_name}.delay(*args)` or `.apply_async()` for additional options
+
+### Adding an Extension Beat Schedule
+
+1. Create `tasks/schedules.py` in the extension directory with a `SCHEDULES` dictionary
+2. Define schedules using `crontab()` expressions from `celery.schedules`
+3. Schedule keys are automatically prefixed with the extension name to prevent conflicts
+
+Schedules execute in the timezone configured by `CELERY_TIMEZONE`. No core code changes are needed—schedules are auto-discovered at startup from enabled extensions. View registered schedules in Flower UI or Redis with `redbeat:*` key patterns. Reference `app/extensions/_example/tasks/schedules.py` for format examples.
+
+---
+
+## Admin Interface
+
+### Adding an Admin View
 
 **Basic configuration:**
-- Create `ModelView` subclass in `app/admin/views.py` with `model={Model}` - auto-registered
-- Set display name, icon, column lists for list/form/detail pages, search fields, sortable columns
+1. Create a `ModelView` subclass in `app/admin/views.py` with `model={Model}` (auto-registered)
+2. Set display name, icon, column lists for list/form/detail pages, search fields, and sortable columns
 
 **File organization:**
-- Split into multiple files for better maintainability
-- Structure: `admin/views.py` re-exports all view classes from individual files
-- Auto-discovery scans module namespace via `inspect.getmembers()` - views imported in `views.py` are automatically registered
+Split views into multiple files for maintainability. Structure `admin/views.py` to re-export all view classes from individual files. Auto-discovery scans the module namespace via `inspect.getmembers()`—views imported in `views.py` are automatically registered.
 
-**Column groups for reusability:**
-- Define module-level constants grouping related columns by domain
-- Use spread operator to compose configurations from multiple groups
-- Enables single source of truth, reduces duplication, provides clear semantic organization
+**Column groups:**
+Define module-level constants grouping related columns by domain. Use the spread operator to compose configurations from multiple groups for reusability.
 
-**Display formatters:**
+**Customization:**
 - Add `column_formatters` dict mapping columns to formatting functions
+- Use `app/admin/filters.py` for reusable filter base classes
+- `EnumFilterBase` auto-generates filter options from enum classes
+- Custom filters implement `lookups()` and `async get_filtered_query()` methods, supporting multiple filters that combine via query parameters
 
-**Custom filters:**
-- Use `app/admin/filters.py` module for reusable filter base classes
-- `EnumFilterBase` automatically generates filter options from enum classes
-- Custom filters implement `lookups()` and `async get_filtered_query()` methods
-- Supports multiple filters combining with query parameters
+---
 
-## Package Exports
+## Integrations
 
-- **Models/Services/Schemas**: Explicit imports + `__all__ = ["{Class}"]`
-- **Tasks**: `auto_import(__file__, "app.tasks")` for Celery registration
-- **Private**: Prefix with `_` to exclude
+### Library Integration
 
-## TypeScript Client
+**Universal capabilities** require an abstraction layer:
 
-- Run `make client-generate` for TypeScript client in `./client/` with full type safety
-
-## Adding Library Integration
-
-**Universal capabilities** (create abstraction):
-1. Abstraction layer in `app/lib/{capability}/`: protocol (base.py), enums (config.py), factory, dependencies
-2. Provider implementation in `app/lib/{library}/{capability}.py` named `{Library}{Capability}Provider`
-3. Register: add enum value, map to class in factory, update settings default
+1. Create abstraction in `app/lib/{capability}/`: protocol (`base.py`), enums (`config.py`), factory, and dependencies
+2. Implement provider in `app/lib/{library}/{capability}.py` named `{Library}{Capability}Provider`
+3. Register by adding an enum value, mapping to the class in factory, and updating settings default
 4. Test endpoints: schemas in `app/api/lib/schemas/{capability}.py`, endpoints use DI
 
-**Library-specific features** (no abstraction):
-1. Implementation in `app/lib/{library}/{feature}.py`
-2. Optional test endpoints in `app/api/lib/{library}/{feature}.py`
+**Library-specific features** (no abstraction needed):
 
-**Testing pattern**: Mirror `app/lib/` structure in `app/api/lib/` with 1:1 endpoint mapping, share schemas via `app/api/lib/schemas/`
+1. Implement in `app/lib/{library}/{feature}.py`
+2. Optionally add test endpoints in `app/api/lib/{library}/{feature}.py`
 
-## Adding External Integration
+Mirror `app/lib/` structure in `app/api/lib/` for testing, with 1:1 endpoint mapping and shared schemas via `app/api/lib/schemas/`.
 
-**Directory structure** for third-party services:
+### External Service Integration
+
+**Directory structure:**
+
 ```
 app/integrations/{service}/
 ├── types.py         # TypedDict for external API structures
@@ -135,13 +140,18 @@ app/integrations/{service}/
 └── utils.py         # Formatters and helpers
 ```
 
-**Implementation steps**:
-1. TypedDict types for webhook/API structures in `types.py`
-2. Client class with async methods in `client.py`
-3. Pydantic schemas in `app/schemas/{service}.py` for endpoint validation
-4. API endpoints in `app/api/integrations/{service}.py` to trigger actions
-5. Webhook endpoints in `app/api/webhooks/{service}.py` to receive events
-6. Celery tasks in `app/tasks/{service}_tasks.py` for background processing
-7. Message formatters in `utils.py` for database storage
+**Implementation steps:**
 
-**Principles**: TypedDict for external APIs (zero overhead), Pydantic for our endpoints (validation), Celery for async webhook processing (response time requirements), format rich data for database storage (LLM context).
+1. Define TypedDict types for webhook/API structures in `types.py`
+2. Create a client class with async methods in `client.py`
+3. Add Pydantic schemas in `app/schemas/{service}.py` for endpoint validation
+4. Create API endpoints in `app/api/integrations/{service}.py` to trigger actions
+5. Create webhook endpoints in `app/api/webhooks/{service}.py` to receive events
+6. Add Celery tasks in `app/tasks/{service}_tasks.py` for background processing
+7. Implement message formatters in `utils.py` for database storage
+
+**Design principles:**
+- TypedDict for external APIs (zero overhead)
+- Pydantic for internal endpoints (validation)
+- Celery for async webhook processing (fast response times)
+- Format rich data for database storage (LLM context)
