@@ -1,7 +1,7 @@
 """Alembic Database Migration Environment.
 
 Auto-discovers models from app/models/*.py, app/features/*/models.py,
-and extensions via glob pattern.
+integrations, and extensions via unified autodiscover system.
 Async-compatible with Supabase (statement_cache_size=0 for pgbouncer).
 
 See docs/tech-stack.md for Alembic configuration and migration workflow.
@@ -21,29 +21,22 @@ from sqlmodel import SQLModel
 # Load .env file into os.environ before importing settings
 load_dotenv()
 
+from app.core.autodiscover import ModuleType, autodiscover_models  # noqa: E402
 from app.core.config import settings  # noqa: E402
 
-# Auto-import all models from app/models/ for Alembic autogenerate
-# Add new model file → migrations automatically detect it
+# === Auto-discover Models ===
+
+# Core models (app/models/*.py)
 models_path = Path(__file__).parent.parent / "app" / "models"
 for model_file in models_path.glob("*.py"):
     if model_file.name != "__init__.py":
         module_name = f"app.models.{model_file.stem}"
         __import__(module_name)
 
-# Auto-import all feature models from app/features/*/models.py
-features_path = Path(__file__).parent.parent / "app" / "features"
-for feature_dir in features_path.iterdir():
-    if feature_dir.is_dir():
-        models_file = feature_dir / "models.py"
-        if models_file.exists():
-            module_name = f"app.features.{feature_dir.name}.models"
-            __import__(module_name)
+for module_type in [ModuleType.FEATURES, ModuleType.INTEGRATIONS, ModuleType.EXTENSIONS]:
+    autodiscover_models(module_type)
 
-# Import extension models
-from app.extensions import load_extensions  # noqa: E402
-
-load_extensions("models")
+# === Alembic Config ===
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

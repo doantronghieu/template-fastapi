@@ -4,7 +4,7 @@ import pytest
 
 from app.integrations.salesforce.config import salesforce_settings
 from app.integrations.salesforce.client import SalesforceClient
-from app.integrations.salesforce.services.crud_service import CRUDService
+from app.integrations.salesforce.service import CRUDService
 
 
 def _get_salesforce_credentials() -> dict | None:

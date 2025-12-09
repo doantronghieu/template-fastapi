@@ -4,29 +4,28 @@ from fastapi import APIRouter
 
 from .client import MessengerClient
 from .dependencies import MessengerClientDep, get_messenger_client
-from .schemas import Message, MultiMessageResponse
-from .services.sender import (
-    MessageSenderService,
-    MessageSenderServiceDep,
-    get_message_sender_service,
-)
-from .types import (
+from .schemas.llm import (
     ButtonType,
+    Message,
     MessageType,
+    MultiMessageResponse,
     QuickReplyButton,
     QuickReplyContentType,
     TemplateButton,
     TemplateElement,
-    WebhookPayload,
 )
-from .utils.formatters import (
+from .schemas.types import WebhookPayload
+from .service import (
+    MessageSenderService,
+    MessageSenderServiceDep,
+    get_message_sender_service,
+)
+from .utils import (
+    format_messenger_message,
     format_quick_replies,
+    format_response_for_storage,
     format_template_buttons,
     format_template_elements,
-)
-from .utils.webhook_parser import (
-    format_messenger_message,
-    format_response_for_storage,
     parse_webhook_payload,
 )
 

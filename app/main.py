@@ -25,8 +25,7 @@ from app.core.admin import setup_admin  # noqa: E402
 from app.core.config import settings  # noqa: E402
 from app.core.database import init_db  # noqa: E402
 from app.core.openapi_tags import (  # noqa: E402
-    get_extension_tags_from_routes,
-    get_openapi_tags,
+    get_openapi_tags_from_routes,
     get_tag_groups_from_routes,
 )
 from app.core.templates import BASE_DIR  # noqa: E402
@@ -48,7 +47,6 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     lifespan=lifespan,
-    openapi_tags=get_openapi_tags(),  # Only core tags initially
 )
 
 # Configure CORS
@@ -75,18 +73,12 @@ setup_admin(app)
 
 
 def custom_openapi():
-    """Customize OpenAPI schema with x-tagGroups for nested navigation."""
+    """Customize OpenAPI schema with auto-discovered tags and x-tagGroups."""
     if app.openapi_schema:
         return app.openapi_schema
 
-    # Generate core tags
-    core_tags = get_openapi_tags()
-
-    # Auto-discover extension tags from registered routes
-    extension_tags = get_extension_tags_from_routes(app)
-
-    # Combine all tags
-    all_tags = core_tags + extension_tags
+    # Auto-discover all tags from registered routes
+    all_tags = get_openapi_tags_from_routes(app)
 
     openapi_schema = get_openapi(
         title=app.title,
@@ -94,10 +86,10 @@ def custom_openapi():
         openapi_version=app.openapi_version,
         description=app.description,
         routes=app.routes,
-        tags=all_tags,  # Combined tags
+        tags=all_tags,
     )
 
-    # Add x-tagGroups with auto-discovered extension tags
+    # Add x-tagGroups with auto-discovered tags
     openapi_schema["x-tagGroups"] = get_tag_groups_from_routes(app)
 
     app.openapi_schema = openapi_schema

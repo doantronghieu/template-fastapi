@@ -4,7 +4,7 @@ from fastapi import APIRouter
 
 from .client import GmailClient
 from .dependencies import GmailClientDep, get_gmail_client
-from .types import EmailAddress, EmailMessage
+from .schemas.types import EmailAddress, EmailMessage
 
 __all__ = [
     "EmailAddress",

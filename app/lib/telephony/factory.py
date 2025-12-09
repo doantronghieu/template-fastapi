@@ -7,7 +7,7 @@ based on application configuration.
 from collections.abc import Callable
 from typing import Annotated
 
-from app.integrations import require_integration
+from app.core.autodiscover import ModuleType, require_module
 from app.lib.telephony.base import TelephonyProvider
 from app.lib.telephony.config import TelephonyProviderType
 
@@ -37,7 +37,7 @@ def get_telephony_provider(
     return provider_factory()
 
 
-@require_integration("telnyx")
+@require_module(ModuleType.INTEGRATIONS, "telnyx")
 def _get_telnyx_provider() -> TelephonyProvider:
     """Get cached Telnyx telephony provider."""
     from app.integrations.telnyx.provider import get_telephony_provider

@@ -3,9 +3,9 @@
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.integrations import generate_integration_env, get_integration_env_path
+from app.core.autodiscover import ModuleType, generate_module_env, get_module_env_path
 
-_env_file_path = get_integration_env_path(__file__)
+_env_file_path = get_module_env_path(ModuleType.INTEGRATIONS, __file__)
 
 
 class SalesforceSettings(BaseSettings):
@@ -33,5 +33,5 @@ class SalesforceSettings(BaseSettings):
     )
 
 
-generate_integration_env(__file__, SalesforceSettings)
+generate_module_env(ModuleType.INTEGRATIONS, __file__, SalesforceSettings)
 salesforce_settings = SalesforceSettings()

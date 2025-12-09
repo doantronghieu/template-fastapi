@@ -9,7 +9,7 @@ from app.lib.document_processing.dependencies import (
     get_text_extractor_dep,
 )
 from app.lib.document_processing.factory import get_text_extractor
-from app.lib.document_processing.schemas import (
+from app.lib.document_processing.schemas.dto import (
     BytesTextSource,
     DoclingOptions,
     DoclingTextExtractionMode,

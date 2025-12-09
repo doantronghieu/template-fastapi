@@ -1,1 +1,0 @@
-"""Example extension admin views."""

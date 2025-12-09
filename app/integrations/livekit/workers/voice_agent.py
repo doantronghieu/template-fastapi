@@ -60,7 +60,7 @@ class VoiceChatBackend:
 
         from app.core.database import async_session_maker
         from app.features.voice.models import VoiceSessionType
-        from app.features.voice.services.session_service import VoiceSessionService
+        from app.features.voice.service import VoiceSessionService
 
         async with async_session_maker() as db:
             session_service = VoiceSessionService(db)
@@ -86,8 +86,7 @@ class VoiceChatBackend:
     async def chat(self, text: str) -> str:
         """Process message using fresh DB connection per call."""
         from app.core.database import async_session_maker
-        from app.features.voice.services.chat_service import VoiceChatService
-        from app.features.voice.services.session_service import VoiceSessionService
+        from app.features.voice.service import VoiceChatService, VoiceSessionService
         from app.lib.llm.factory import get_llm_provider
 
         try:

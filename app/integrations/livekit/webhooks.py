@@ -7,10 +7,10 @@ from livekit import api
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.dependencies.core import get_session
-from app.features.voice.services.session_service import VoiceSessionService
+from app.features.voice.service import VoiceSessionService
 from app.integrations.livekit.config import livekit_settings
-from app.integrations.livekit.schemas import LiveKitWebhookEventType
-from app.integrations.livekit.services import get_webhook_service
+from app.integrations.livekit.schemas.api import LiveKitWebhookEventType
+from app.integrations.livekit.service import get_webhook_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

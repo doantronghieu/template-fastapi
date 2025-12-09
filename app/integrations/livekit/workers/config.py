@@ -64,7 +64,7 @@ class AgentSettings(BaseSettings):
         description="LLM model provider",
     )
     SYSTEM_PROMPT_PATH: str = Field(
-        default="app/features/voice/prompts/system.md",
+        default="app/features/voice/resources/prompts/system.md",
         description="Path to system prompt file (from project root)",
     )
 

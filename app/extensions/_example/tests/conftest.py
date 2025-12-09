@@ -4,6 +4,9 @@ import pytest
 
 from app.core.config import settings
 
+# Import fixtures from root conftest
+pytest_plugins = ["tests.conftest"]
+
 
 @pytest.fixture
 def with_example_extension(monkeypatch):

@@ -10,8 +10,8 @@ from app.features.voice.models import (
     VoiceSessionStatus,
     VoiceSessionType,
 )
-from app.features.voice.services.chat_service import VoiceChatService
-from app.features.voice.services.session_service import (
+from app.features.voice.service import (
+    VoiceChatService,
     VoiceSessionService,
     get_voice_session_service,
 )

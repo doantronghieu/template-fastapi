@@ -1,8 +1,4 @@
-"""Centralized OpenAPI tag registry for API documentation.
-
-Single source of truth for all API tags, their descriptions, and grouping.
-Auto-generates OpenAPI tags metadata and x-tagGroups for nested navigation.
-"""
+"""Auto-generate OpenAPI tags and x-tagGroups from registered routes."""
 
 from enum import Enum
 from typing import TYPE_CHECKING
@@ -15,129 +11,105 @@ class TagGroup(str, Enum):
     """Top-level tag groups for organizing API endpoints."""
 
     CORE = "Core"
+    FEATURES = "Features"
     LIB = "Lib"
     INTEGRATION = "Integration"
     EXTENSIONS = "Extensions"
 
 
-class APITag(str, Enum):
-    """API endpoint tags - use these in router decorators for type safety."""
-
-    # Core tags
-    HEALTH = "Health"
-    EXAMPLES = "Examples"
-    TASKS = "Tasks"
-    WEBHOOKS = "Webhooks"
-
-    # Lib tags
-    LLM = "LLM"
-    DOCUMENT_PROCESSING = "Document Processing"
-
-    # Integration tags
-    MESSENGER = "Messenger"
-    GMAIL = "Gmail"
-
-
-# Tag metadata: description and group assignment
-TAG_METADATA: dict[APITag, dict] = {
-    # Core
-    APITag.HEALTH: {
-        "description": "Health check and status endpoints",
-        "group": TagGroup.CORE,
-    },
-    APITag.EXAMPLES: {
-        "description": "Example CRUD operations",
-        "group": TagGroup.CORE,
-    },
-    APITag.TASKS: {
-        "description": "Celery background task management",
-        "group": TagGroup.CORE,
-    },
-    APITag.WEBHOOKS: {
-        "description": "Webhook endpoints for external integrations",
-        "group": TagGroup.CORE,
-    },
-    # Integration
-    APITag.MESSENGER: {
-        "description": "Facebook Messenger API operations",
-        "group": TagGroup.INTEGRATION,
-    },
-    APITag.GMAIL: {
-        "description": "Gmail IMAP integration for searching emails",
-        "group": TagGroup.INTEGRATION,
-    },
-    # Lib
-    APITag.LLM: {
-        "description": "LLM provider-agnostic test endpoints",
-        "group": TagGroup.LIB,
-    },
-    APITag.DOCUMENT_PROCESSING: {
-        "description": "Text extraction from documents",
-        "group": TagGroup.LIB,
-    },
+# Static core tags that don't come from auto-discovered modules
+CORE_TAGS: dict[str, dict] = {
+    "Health": {"description": "Health check and status endpoints", "group": TagGroup.CORE},
+    "Examples": {"description": "Example CRUD operations", "group": TagGroup.CORE},
+    "Tasks": {"description": "Celery background task management", "group": TagGroup.CORE},
+    "Webhooks": {"description": "Webhook endpoints for external integrations", "group": TagGroup.CORE},
 }
 
+# Tag description prefixes by group
+_GROUP_PREFIXES: dict[TagGroup, str] = {
+    TagGroup.FEATURES: "📦",
+    TagGroup.LIB: "📚",
+    TagGroup.INTEGRATION: "🔗",
+    TagGroup.EXTENSIONS: "🔌",
+    TagGroup.CORE: "⚙️",
+}
 
-def get_openapi_tags() -> list[dict]:
-    """Generate OpenAPI tags metadata from TAG_METADATA.
-
-    Returns:
-        List of tag dictionaries for FastAPI openapi_tags parameter
-    """
-    return [
-        {"name": tag.value, "description": meta["description"]}
-        for tag, meta in TAG_METADATA.items()
-    ]
+# Logical ordering for tag groups display
+_GROUP_ORDER: list[TagGroup] = [
+    TagGroup.CORE,
+    TagGroup.FEATURES,
+    TagGroup.LIB,
+    TagGroup.INTEGRATION,
+    TagGroup.EXTENSIONS,
+]
 
 
-def get_extension_tags_from_routes(app: "FastAPI") -> list[dict]:
-    """Auto-discover extension tags by scanning registered routes.
+def _infer_group_from_path(path: str) -> TagGroup:
+    """Infer tag group from route path prefix."""
+    if "/features/" in path:
+        return TagGroup.FEATURES
+    if "/integrations/" in path:
+        return TagGroup.INTEGRATION
+    if "/lib/" in path:
+        return TagGroup.LIB
+    if "/extensions/" in path:
+        return TagGroup.EXTENSIONS
+    return TagGroup.CORE
 
-    Called once at OpenAPI schema generation (lazy evaluation).
-    Scans all routes under /api/extensions/ prefix and extracts unique tags.
 
-    Args:
-        app: FastAPI application instance with registered routes
+def _format_tag_name(tag: str) -> str:
+    """Format tag name for display (Title Case with spaces)."""
+    if " " in tag or tag[0].isupper():
+        return tag
+    return tag.replace("_", " ").replace("-", " ").title()
 
-    Returns:
-        List of tag dictionaries with auto-generated descriptions
-    """
-    extension_tags = set()
+
+def get_openapi_tags_from_routes(app: "FastAPI") -> list[dict]:
+    """Auto-discover all tags by scanning registered routes at OpenAPI schema generation time."""
+    discovered_tags: dict[str, dict] = {}
 
     for route in app.routes:
-        if hasattr(route, "path") and "/extensions/" in route.path:
-            tags = getattr(route, "tags", [])
-            extension_tags.update(tags)
+        path = getattr(route, "path", "")
+        tags = getattr(route, "tags", [])
 
-    return [
-        {"name": tag, "description": f"🔌 {tag} features"}
-        for tag in sorted(extension_tags)
-    ]
+        for tag in tags:
+            if tag not in discovered_tags:
+                if tag in CORE_TAGS:
+                    discovered_tags[tag] = {
+                        "name": tag,
+                        "description": CORE_TAGS[tag]["description"],
+                        "group": CORE_TAGS[tag]["group"],
+                    }
+                else:
+                    group = _infer_group_from_path(path)
+                    prefix = _GROUP_PREFIXES.get(group, "")
+                    formatted = _format_tag_name(tag)
+                    discovered_tags[tag] = {
+                        "name": tag,
+                        "description": f"{prefix} {formatted} endpoints",
+                        "group": group,
+                    }
+
+    return [{"name": info["name"], "description": info["description"]} for info in discovered_tags.values()]
 
 
 def get_tag_groups_from_routes(app: "FastAPI") -> list[dict]:
-    """Generate x-tagGroups including auto-discovered extension tags.
-
-    Args:
-        app: FastAPI application instance
-
-    Returns:
-        List of tag group dictionaries for x-tagGroups extension
-    """
+    """Generate x-tagGroups from auto-discovered tags, grouped by route path category."""
     groups: dict[TagGroup, list[str]] = {}
-    for tag, meta in TAG_METADATA.items():
-        group = meta["group"]
-        if group not in groups:
-            groups[group] = []
-        groups[group].append(tag.value)
 
-    tag_groups = [{"name": group.value, "tags": tags} for group, tags in groups.items()]
+    for route in app.routes:
+        path = getattr(route, "path", "")
+        tags = getattr(route, "tags", [])
 
-    extension_tag_dicts = get_extension_tags_from_routes(app)
-    if extension_tag_dicts:
-        extension_tag_names = [tag_dict["name"] for tag_dict in extension_tag_dicts]
-        tag_groups.append(
-            {"name": TagGroup.EXTENSIONS.value, "tags": extension_tag_names}
-        )
+        for tag in tags:
+            group = CORE_TAGS[tag]["group"] if tag in CORE_TAGS else _infer_group_from_path(path)
+            if group not in groups:
+                groups[group] = []
+            if tag not in groups[group]:
+                groups[group].append(tag)
 
-    return tag_groups
+    return [
+        {"name": group.value, "tags": sorted(groups[group])}
+        for group in _GROUP_ORDER
+        if group in groups and groups[group]
+    ]

@@ -1,28 +1,32 @@
+"""API Router."""
+
 from fastapi import APIRouter
 
-from app.api import examples, health, lib, tasks
-from app.api.features import features_router
-from app.api.integrations.router import integration_router
-from app.api.webhooks.router import webhook_router
-from app.core.openapi_tags import APITag
-from app.extensions import load_extensions
+from app.api import examples, health, tasks
+from app.core.autodiscover import ModuleType, autodiscover_routers, autodiscover_webhooks
 
 api_router = APIRouter()
 
-# Core API routes
-api_router.include_router(health.router, tags=[APITag.HEALTH])
-api_router.include_router(examples.router, tags=[APITag.EXAMPLES])
-api_router.include_router(tasks.router, prefix="/tasks", tags=[APITag.TASKS])
-api_router.include_router(lib.router, prefix="/lib")
+# === Core Routes ===
+api_router.include_router(health.router, tags=["Health"])
+api_router.include_router(examples.router, tags=["Examples"])
+api_router.include_router(tasks.router, prefix="/tasks", tags=["Tasks"])
 
-# Integration routes (tags applied at integration router level)
-api_router.include_router(integration_router, prefix="/integrations")
+# === Auto-discovered Routes ===
+ROUTER_CONFIG = {
+    ModuleType.FEATURES: {"prefix_template": "/features/{name}", "include_in_schema": False},
+    ModuleType.LIB: {"prefix_template": "/lib/{name}"},
+    ModuleType.INTEGRATIONS: {"prefix_template": "/integrations/{name}"},
+    ModuleType.EXTENSIONS: {"prefix_template": "/extensions/{name}"},
+}
 
-# Feature routes (internal, not in OpenAPI schema)
-api_router.include_router(features_router, prefix="/features", include_in_schema=False)
+for module_type, config in ROUTER_CONFIG.items():
+    autodiscover_routers(module_type, api_router, **config)
 
-# Webhook routes
-api_router.include_router(webhook_router, prefix="/webhooks", tags=[APITag.WEBHOOKS])
+# === Webhook Router ===
+webhook_router = APIRouter()
 
-# Load extension API routes
-load_extensions("api", api_router)
+for module_type in [ModuleType.FEATURES, ModuleType.INTEGRATIONS, ModuleType.EXTENSIONS]:
+    autodiscover_webhooks(module_type, webhook_router)
+
+api_router.include_router(webhook_router, prefix="/webhooks", tags=["Webhooks"])

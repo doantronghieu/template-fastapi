@@ -36,7 +36,7 @@ from tenacity import (
 
 from app.integrations.docling.config import docling_settings
 from app.lib.document_processing.base import TextExtractor
-from app.lib.document_processing.schemas import (
+from app.lib.document_processing.schemas.dto import (
     BytesTextSource,
     DoclingOptions,
     DoclingTextExtractionMode,

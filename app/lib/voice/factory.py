@@ -7,7 +7,7 @@ based on application configuration.
 from collections.abc import Callable
 from functools import lru_cache
 
-from app.integrations import require_integration
+from app.core.autodiscover import ModuleType, require_module
 from app.lib.voice.base import STTProvider, TTSProvider
 from app.lib.voice.config import STTProviderType, TTSProviderType
 
@@ -31,7 +31,7 @@ def get_stt_provider() -> STTProvider:
     return provider_factory()
 
 
-@require_integration("deepgram")
+@require_module(ModuleType.INTEGRATIONS, "deepgram")
 def _get_deepgram_stt() -> STTProvider:
     """Lazy import DeepGram STT provider."""
     from app.integrations.deepgram.stt import DeepGramSTTProvider
@@ -58,7 +58,7 @@ def get_tts_provider() -> TTSProvider:
     return provider_factory()
 
 
-@require_integration("deepgram")
+@require_module(ModuleType.INTEGRATIONS, "deepgram")
 def _get_deepgram_tts() -> TTSProvider:
     """Lazy import DeepGram TTS provider."""
     from app.integrations.deepgram.tts import DeepGramTTSProvider

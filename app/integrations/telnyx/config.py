@@ -6,7 +6,7 @@ Environment variables loaded from envs/integrations/telnyx.env
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.integrations import get_integration_env_path
+from app.core.autodiscover import ModuleType, get_module_env_path
 
 
 class TelnyxSettings(BaseSettings):
@@ -34,7 +34,7 @@ class TelnyxSettings(BaseSettings):
     )
 
     model_config = SettingsConfigDict(
-        env_file=get_integration_env_path(__file__),
+        env_file=get_module_env_path(ModuleType.INTEGRATIONS, __file__),
         extra="ignore",
     )
 

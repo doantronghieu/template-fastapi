@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, Request
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.dependencies.core import get_session
-from app.features.voice.services.session_service import VoiceSessionService
-from app.integrations.telnyx.schemas import TelnyxCallEventType, TelnyxWebhookEvent
-from app.integrations.telnyx.services import get_call_service
+from app.features.voice.service import VoiceSessionService
+from app.integrations.telnyx.schemas.api import TelnyxCallEventType, TelnyxWebhookEvent
+from app.integrations.telnyx.service import get_call_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

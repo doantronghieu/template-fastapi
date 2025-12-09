@@ -4,8 +4,12 @@ from fastapi import APIRouter
 
 from .client import SalesforceClient
 from .dependencies import SalesforceClientDep, get_salesforce_client
-from .schemas import FileResponse, LibraryFilesResponse, LibraryResponse
-from .types import ContentVersion, ContentWorkspace, FileInfo
+from .schemas.api import (
+    FileResponse,
+    LibraryFilesResponse,
+    LibraryResponse,
+)
+from .schemas.types import ContentVersion, ContentWorkspace, FileInfo
 
 __all__ = [
     "SalesforceClient",

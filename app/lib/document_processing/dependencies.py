@@ -9,7 +9,7 @@ from fastapi import Depends, Query
 
 from app.lib.document_processing.base import TextExtractor
 from app.lib.document_processing.factory import get_text_extractor
-from app.lib.document_processing.schemas import ProviderType
+from app.lib.document_processing.schemas.dto import ProviderType
 
 
 def get_text_extractor_dep(

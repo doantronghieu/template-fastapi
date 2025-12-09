@@ -9,7 +9,7 @@ import uuid
 import pytest
 
 from app.integrations.salesforce.exceptions import SalesforceRecordNotFound
-from app.integrations.salesforce.services.crud_service import CRUDService
+from app.integrations.salesforce.service import CRUDService
 
 
 def _test_subject() -> str:

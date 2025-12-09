@@ -7,14 +7,27 @@ See docs/tech-stack.md for Celery configuration and connection optimization deta
 See docs/patterns/logging.md for task ID context pattern.
 """
 
-import importlib
 import logging
 import sys
+from contextvars import ContextVar
 
 from celery import Celery, signals
 
+from app.core.autodiscover import ModuleType, autodiscover_beat_schedules, autodiscover_tasks
 from app.core.config import settings
-from app.core.task_context import task_id_var
+
+# Context variable for task ID (automatically set via Celery signals)
+task_id_var: ContextVar[str | None] = ContextVar("task_id", default=None)
+
+
+def get_task_id() -> str:
+    """Get current task ID prefix for logging.
+
+    Returns formatted prefix like "[b83caca6] " or empty string if no task context.
+    Usage: logger.info(f"{get_task_id()}Processing...")
+    """
+    task_id = task_id_var.get()
+    return f"[{task_id[:8]}] " if task_id else ""
 
 # Configure basic logging early for module-level initialization
 # This ensures logs during import are visible before Celery's logging setup
@@ -28,80 +41,26 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def _get_task_modules() -> list[str]:
-    """Discover all task modules from core, features, and extensions.
+# === Discover Task Modules ===
+task_modules = [settings.CELERY_TASKS_MODULE]  # Core tasks
 
-    Returns:
-        list: Task module paths for Celery include parameter
-    """
-    from pathlib import Path
-
-    modules = [settings.CELERY_TASKS_MODULE]  # Core tasks
-
-    # Discover feature task modules
-    features_path = Path(__file__).parent.parent / "features"
-    if features_path.exists():
-        for feature_dir in features_path.iterdir():
-            if not feature_dir.is_dir() or feature_dir.name.startswith("_"):
-                continue
-
-            tasks_package = feature_dir / "tasks" / "__init__.py"
-            tasks_file = feature_dir / "tasks.py"
-
-            if tasks_package.exists() or tasks_file.exists():
-                module_name = f"app.features.{feature_dir.name}.tasks"
-                modules.append(module_name)
-                logger.debug(f"Discovered feature tasks: {module_name}")
-
-    return modules
+for module_type in [ModuleType.FEATURES, ModuleType.INTEGRATIONS, ModuleType.EXTENSIONS]:
+    task_modules += autodiscover_tasks(module_type)
 
 
 celery_app = Celery(
     settings.CELERY_APP_NAME,
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
-    include=_get_task_modules(),
+    include=task_modules,
 )
 
 
-def load_extension_beat_schedules() -> dict:
-    """Discover and merge beat schedules from enabled extensions.
+# === Discover Beat Schedules ===
+beat_schedules = {}
 
-    Scans {extension}/tasks/schedules.py for SCHEDULES dictionary.
-    Automatically prefixes schedule keys with extension name to prevent conflicts.
-
-    Returns:
-        dict: Merged schedules from all enabled extensions
-    """
-    schedules = {}
-
-    for ext_name in settings.ENABLED_EXTENSIONS:
-        try:
-            schedule_module = importlib.import_module(
-                f"app.extensions.{ext_name}.tasks.schedules"
-            )
-
-            if hasattr(schedule_module, "SCHEDULES"):
-                for key, value in schedule_module.SCHEDULES.items():
-                    prefixed_key = f"{ext_name}.{key}"
-                    schedules[prefixed_key] = value
-                    logger.info(f"Registered beat schedule: {prefixed_key}")
-            else:
-                logger.warning(
-                    f"Extension '{ext_name}' has tasks/schedules.py but no SCHEDULES defined"
-                )
-
-        except ImportError:
-            # Extension doesn't have schedules - that's fine
-            pass
-        except Exception as e:
-            # Log but don't fail - lenient error handling
-            logger.warning(
-                f"Failed to load schedules from extension '{ext_name}': {e}",
-                exc_info=True,
-            )
-
-    return schedules
+for module_type in [ModuleType.FEATURES, ModuleType.INTEGRATIONS, ModuleType.EXTENSIONS]:
+    beat_schedules.update(autodiscover_beat_schedules(module_type))
 
 
 celery_app.conf.update(
@@ -152,14 +111,9 @@ celery_app.conf.update(
         "retry_on_timeout": True,
         "health_check_interval": 30,  # Check connection health every 30s
     },
-    # Beat schedule from extensions
-    beat_schedule=load_extension_beat_schedules(),
+    # Beat schedule from auto-discovery
+    beat_schedule=beat_schedules,
 )
-
-# Load extension tasks for Celery discovery
-from app.extensions import load_extensions  # noqa: E402
-
-load_extensions("tasks")
 
 
 # Automatic task ID binding via signals

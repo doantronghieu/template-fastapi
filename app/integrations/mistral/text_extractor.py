@@ -9,7 +9,7 @@ from mistralai import Mistral
 
 from app.integrations.mistral.config import mistral_settings
 from app.lib.document_processing.base import TextExtractor
-from app.lib.document_processing.schemas import (
+from app.lib.document_processing.schemas.dto import (
     BytesTextSource,
     PathTextSource,
     TextExtractionOptions,

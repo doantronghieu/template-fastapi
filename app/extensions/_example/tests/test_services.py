@@ -2,11 +2,11 @@
 
 import pytest
 
-from app.extensions._example.schemas.feature import (
+from app.extensions._example.schemas.api import (
     ExampleFeatureCreate,
     ExampleFeatureUpdate,
 )
-from app.extensions._example.services import ExampleFeatureService
+from app.extensions._example.service import ExampleFeatureService
 
 pytestmark = pytest.mark.usefixtures("with_example_extension")
 

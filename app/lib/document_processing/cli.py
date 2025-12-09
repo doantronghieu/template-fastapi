@@ -21,7 +21,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from app.lib.document_processing.factory import get_text_extractor
-from app.lib.document_processing.schemas import (
+from app.lib.document_processing.schemas.dto import (
     DoclingOptions,
     DoclingTextExtractionMode,
     MistralOptions,

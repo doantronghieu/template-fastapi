@@ -6,7 +6,7 @@ Defines the interface for document text extraction providers.
 from abc import ABC, abstractmethod
 from typing import Annotated
 
-from app.lib.document_processing.schemas import (
+from app.lib.document_processing.schemas.dto import (
     TextExtractionOptions,
     TextExtractionResult,
     TextSource,

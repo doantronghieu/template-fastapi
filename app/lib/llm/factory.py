@@ -7,7 +7,7 @@ based on application configuration.
 from collections.abc import Callable
 from functools import lru_cache
 
-from app.integrations import require_integration
+from app.core.autodiscover import ModuleType, require_module
 from app.lib.llm.base import LLMProvider
 from app.lib.llm.config import LLMProviderType
 
@@ -32,7 +32,7 @@ def get_llm_provider() -> LLMProvider:
     return provider_factory()
 
 
-@require_integration("langchain")
+@require_module(ModuleType.INTEGRATIONS, "langchain")
 def _get_langchain_provider() -> LLMProvider:
     """Lazy import LangChain provider."""
     from app.integrations.langchain.llm import LangChainLLMProvider

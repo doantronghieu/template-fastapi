@@ -13,7 +13,7 @@ from app.services.rate_limiter import RateLimiterDep
 
 from .config import messenger_settings
 from .dependencies import MessengerClientDep
-from .utils.webhook_parser import format_messenger_message, parse_webhook_payload
+from .utils import format_messenger_message, parse_webhook_payload
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
