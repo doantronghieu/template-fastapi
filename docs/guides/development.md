@@ -1,157 +1,172 @@
-# Development Patterns
+# Development Guide
 
-A guide to common workflows and coding conventions across the codebase.
-
----
-
-## Core Principles
-
-### Type Hints & Documentation
-
-Use `Annotated[{Type}, "{description}"]` for input parameters that need explanation. Self-explanatory parameters remain unadorned. Docstrings describe only the function's purpose—omit parameter and return value lists. Return types use standard type hints.
-
-### File Naming
-
-Name related files with consistent prefixes using the pattern `{feature}_{type}.py`, where type indicates file purpose (service, tasks, schemas, etc.). This applies to services, tasks, API endpoints, schemas, and tests. Files sort together alphabetically, making feature boundaries clear and simplifying navigation.
-
-Centralize enums in dedicated `enums.py` files within model directories to prevent circular imports and maintain a single source of truth.
-
-### Package Exports
-
-- **Models, Services, Schemas**: Use explicit imports with `__all__ = ["{Class}"]`
-- **Tasks**: Use `auto_import(__file__, "app.tasks")` for Celery registration
-- **Private members**: Prefix with `_` to exclude from exports
+Step-by-step workflows for common development tasks.
 
 ---
 
-## Database & Models
+## Adding a Feature
 
-### Adding a New Model
+1. Create feature directory:
+   ```bash
+   mkdir -p app/features/{name} && touch app/features/{name}/{__init__,router,service,models}.py
+   ```
 
-1. Create a SQLModel class in `app/models/{model}.py` with `table=True` and explicit `__tablename__`
-2. Generate migration: `make db-migrate message="add {table}"`
-3. Apply migration: `make db-upgrade`
+2. Add router (`router.py`):
+   ```python
+   from fastapi import APIRouter
 
----
+   router = APIRouter()
 
-## Services & Dependencies
+   @router.get("/")
+   async def list_items():
+       return []
+   ```
 
-### Adding a New Service
+3. Add service (`service.py`) with business logic
 
-1. Create a class in `app/services/{service}.py` containing business logic
-2. Add a provider function that returns a service instance
-3. Create a type alias: `{Service}Dep = Annotated[{Service}, Depends(get_{service})]`
-4. Export in `__init__.py`: `from .{service} import {Service}, {Service}Dep, get_{service}` and update `__all__`
+4. Add models (`models.py`) if needed, then generate migration:
+   ```bash
+   make db-migrate message="add {table}" && make db-upgrade
+   ```
 
----
-
-## API Development
-
-### Adding an Endpoint
-
-1. Create an `APIRouter` in `app/api/{endpoints}.py` with route handlers
-2. Import `APITag` from `app.core.openapi_tags` for type-safe tag usage
-3. Include in `app/api/router.py`: `api_router.include_router({endpoints}.router, tags=[APITag.{TAG}])`
-4. Inject services via type alias: `async def endpoint(service: {Service}Dep)`
-5. Return SQLModel instances or Pydantic schemas
-6. For new tags: define in `APITag` enum and `TAG_METADATA` in `app/core/openapi_tags.py`
-
-### Adding a Template Page
-
-1. Create a template in `templates/{page}.html` extending `base.html`
-2. Override blocks: `{% block title %}`, `{% block content %}`
-3. Add a route in `app/api/pages.py` returning `templates.TemplateResponse("{page}.html", {"request": request})`
-4. Set `include_in_schema=False` on the route decorator
-
-### TypeScript Client Generation
-
-Run `make client-generate` to produce a TypeScript client in `./client/` with full type safety.
+Router auto-registers to `/api/features/{name}/*`.
 
 ---
 
-## Background Processing
+## Adding an Endpoint
 
-### Adding a Celery Task
+**Within existing module:**
+1. Add route to `{module}/router.py`
+2. Inject dependencies via type alias: `async def endpoint(service: ServiceDep)`
 
-1. Create a task in `app/tasks/{tasks}.py` with `@celery_app.task(name=f"{settings.CELERY_TASKS_MODULE}.{task_name}")`
-2. Add `auto_import(__file__, "app.tasks")` to `tasks/__init__.py`
-3. Trigger with `{task_name}.delay(*args)` or `.apply_async()` for additional options
-
-### Adding an Extension Beat Schedule
-
-1. Create `tasks/schedules.py` in the extension directory with a `SCHEDULES` dictionary
-2. Define schedules using `crontab()` expressions from `celery.schedules`
-3. Schedule keys are automatically prefixed with the extension name to prevent conflicts
-
-Schedules execute in the timezone configured by `CELERY_TIMEZONE`. No core code changes are needed—schedules are auto-discovered at startup from enabled extensions. View registered schedules in Flower UI or Redis with `redbeat:*` key patterns. Reference `app/extensions/_example/tasks/schedules.py` for format examples.
+**For webhooks:**
+1. Create `{module}/webhooks.py` with `router = APIRouter()`
+2. Auto-registers to `/api/webhooks/{module_name}/*`
 
 ---
 
-## Admin Interface
+## Adding a Background Task
 
-### Adding an Admin View
+1. Create `{module}/tasks.py`:
+   ```python
+   from app.core.celery import celery_app
+   from app.core.config import settings
 
-**Basic configuration:**
-1. Create a `ModelView` subclass in `app/admin/views.py` with `model={Model}` (auto-registered)
-2. Set display name, icon, column lists for list/form/detail pages, search fields, and sortable columns
+   @celery_app.task(name=f"{settings.CELERY_TASKS_MODULE}.{task_name}")
+   def process_item(item_id: int):
+       pass
+   ```
 
-**File organization:**
-Split views into multiple files for maintainability. Structure `admin/views.py` to re-export all view classes from individual files. Auto-discovery scans the module namespace via `inspect.getmembers()`—views imported in `views.py` are automatically registered.
-
-**Column groups:**
-Define module-level constants grouping related columns by domain. Use the spread operator to compose configurations from multiple groups for reusability.
-
-**Customization:**
-- Add `column_formatters` dict mapping columns to formatting functions
-- Use `app/admin/filters.py` for reusable filter base classes
-- `EnumFilterBase` auto-generates filter options from enum classes
-- Custom filters implement `lookups()` and `async get_filtered_query()` methods, supporting multiple filters that combine via query parameters
+2. Trigger: `process_item.delay(item_id)` or `.apply_async()`
 
 ---
 
-## Integrations
+## Adding a Beat Schedule
 
-### Library Integration
+1. Create `{module}/schedules.py`:
+   ```python
+   from celery.schedules import crontab
+   from app.core.config import settings
 
-**Universal capabilities** require an abstraction layer:
+   SCHEDULES = {
+       "cleanup_expired": {
+           "task": f"{settings.CELERY_TASKS_MODULE}.cleanup_expired",
+           "schedule": crontab(hour=0, minute=0),
+           "args": (),
+       },
+   }
+   ```
 
-1. Create abstraction in `app/lib/{capability}/`: protocol (`base.py`), enums (`config.py`), factory, and dependencies
-2. Implement provider in `app/lib/{library}/{capability}.py` named `{Library}{Capability}Provider`
-3. Register by adding an enum value, mapping to the class in factory, and updating settings default
-4. Test endpoints: schemas in `app/api/lib/schemas/{capability}.py`, endpoints use DI
+2. Schedule keys auto-prefixed with module name
 
-**Library-specific features** (no abstraction needed):
+---
 
-1. Implement in `app/lib/{library}/{feature}.py`
-2. Optionally add test endpoints in `app/api/lib/{library}/{feature}.py`
+## Adding an Admin View
 
-Mirror `app/lib/` structure in `app/api/lib/` for testing, with 1:1 endpoint mapping and shared schemas via `app/api/lib/schemas/`.
+1. Create `{module}/admin.py`:
+   ```python
+   from sqladmin import ModelView
+   from .models import Item
 
-### External Service Integration
+   class ItemAdmin(ModelView, model=Item):
+       column_list = [Item.id, Item.name, Item.created_at]
+       column_searchable_list = [Item.name]
+   ```
 
-**Directory structure:**
+2. View auto-registers to `/admin`
 
-```
-app/integrations/{service}/
-├── types.py         # TypedDict for external API structures
-├── client.py        # Async HTTP client with retry logic
-├── dependencies.py  # DI providers
-├── webhook.py       # Webhook payload parsing (optional)
-└── utils.py         # Formatters and helpers
-```
+---
 
-**Implementation steps:**
+## Adding a Service
 
-1. Define TypedDict types for webhook/API structures in `types.py`
-2. Create a client class with async methods in `client.py`
-3. Add Pydantic schemas in `app/schemas/{service}.py` for endpoint validation
-4. Create API endpoints in `app/api/integrations/{service}.py` to trigger actions
-5. Create webhook endpoints in `app/api/webhooks/{service}.py` to receive events
-6. Add Celery tasks in `app/tasks/{service}_tasks.py` for background processing
-7. Implement message formatters in `utils.py` for database storage
+1. Create `{module}/service.py`:
+   ```python
+   class ItemService:
+       async def create(self, data: CreateItemRequest) -> Item:
+           ...
+   ```
 
-**Design principles:**
-- TypedDict for external APIs (zero overhead)
-- Pydantic for internal endpoints (validation)
-- Celery for async webhook processing (fast response times)
-- Format rich data for database storage (LLM context)
+2. Add dependency in `{module}/dependencies.py`:
+   ```python
+   from typing import Annotated
+   from fastapi import Depends
+
+   def get_item_service() -> ItemService:
+       return ItemService()
+
+   ItemServiceDep = Annotated[ItemService, Depends(get_item_service)]
+   ```
+
+---
+
+## Adding a Library Abstraction
+
+For provider-agnostic capabilities:
+
+1. Create abstraction in `app/lib/{capability}/`:
+   - `base.py` - Protocol/ABC interface
+   - `factory.py` - Provider factory with `@lru_cache`
+   - `dependencies.py` - FastAPI dependency
+
+2. Implement provider in `app/integrations/{provider}/{capability}.py`
+
+3. Register in factory, configure in settings
+
+---
+
+## Adding an Integration
+
+For external API clients:
+
+1. Create integration directory:
+   ```bash
+   mkdir -p app/integrations/{provider} && touch app/integrations/{provider}/{__init__,client,router,webhooks}.py
+   ```
+
+2. Add client (`client.py`) with async methods and `@lru_cache` singleton
+
+3. Add webhook handlers (`webhooks.py`) for incoming events
+
+4. Disable via `DISABLED_INTEGRATIONS={provider}` if needed
+
+---
+
+## Shared vs Module-Level
+
+| Criterion | Module-Level | Root-Level |
+|-----------|--------------|------------|
+| Used by | 1-2 features | 3+ features |
+| Location | `app/{module_type}/{name}/` | `app/{models,schemas,services}/` |
+| Guideline | Start here | Extract when shared |
+
+---
+
+## Code Style
+
+**Type hints:** Use `Annotated[Type, "description"]` for parameters needing explanation.
+
+**Docstrings:** Describe function purpose only—omit `Args` and `Returns` sections.
+
+**Package exports:** Use `__all__ = ["Class"]` for explicit exports.
+
+---
