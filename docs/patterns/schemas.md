@@ -51,9 +51,9 @@ Use for validation and serialization:
 ```python
 from pydantic import BaseModel, Field
 
-class CreateItemRequest(BaseModel):
-    name: str = Field(description="Item name")
-    quantity: int = Field(ge=1, description="Must be positive")
+class Create{Entity}Request(BaseModel):
+    {field}: str = Field(description="{Entity} {field}")
+    {field2}: int = Field(ge=1, description="Must be positive")
 ```
 
 **Benefits:** Field constraints, OpenAPI docs, input validation.
@@ -110,11 +110,11 @@ Establish a single source of truth for field definitions using base classes.
 Centralize common columns in a `BaseTable` class.
 
 ```python
-class MyModel(MyModelBase, BaseTable, table=True):
-    __tablename__ = "my_table"
+class {Entity}({Entity}Base, BaseTable, table=True):
+    __tablename__ = "{entities}"
 ```
 
-Multiple inheritance order: `{Model}Base, BaseTable, table=True`
+Multiple inheritance order: `{Entity}Base, BaseTable, table=True`
 
 The domain base provides business fields, `BaseTable` provides metadata, and the concrete model defines table-specific configuration.
 

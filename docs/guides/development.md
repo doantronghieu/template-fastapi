@@ -18,7 +18,7 @@ Step-by-step workflows for common development tasks.
    router = APIRouter()
 
    @router.get("/")
-   async def list_items():
+   async def list_{entities}():
        return []
    ```
 
@@ -53,11 +53,11 @@ Router auto-registers to `/api/features/{name}/*`.
    from app.core.config import settings
 
    @celery_app.task(name=f"{settings.CELERY_TASKS_MODULE}.{task_name}")
-   def process_item(item_id: int):
+   def process_{entity}({entity}_id: int):
        pass
    ```
 
-2. Trigger: `process_item.delay(item_id)` or `.apply_async()`
+2. Trigger: `process_{entity}.delay({entity}_id)` or `.apply_async()`
 
 ---
 
@@ -69,8 +69,8 @@ Router auto-registers to `/api/features/{name}/*`.
    from app.core.config import settings
 
    SCHEDULES = {
-       "cleanup_expired": {
-           "task": f"{settings.CELERY_TASKS_MODULE}.cleanup_expired",
+       "{task_name}": {
+           "task": f"{settings.CELERY_TASKS_MODULE}.{task_name}",
            "schedule": crontab(hour=0, minute=0),
            "args": (),
        },
@@ -86,11 +86,11 @@ Router auto-registers to `/api/features/{name}/*`.
 1. Create `{module}/admin.py`:
    ```python
    from sqladmin import ModelView
-   from .models import Item
+   from .models import {Entity}
 
-   class ItemAdmin(ModelView, model=Item):
-       column_list = [Item.id, Item.name, Item.created_at]
-       column_searchable_list = [Item.name]
+   class {Entity}Admin(ModelView, model={Entity}):
+       column_list = [{Entity}.id, {Entity}.name, {Entity}.created_at]
+       column_searchable_list = [{Entity}.name]
    ```
 
 2. View auto-registers to `/admin`
@@ -101,8 +101,8 @@ Router auto-registers to `/api/features/{name}/*`.
 
 1. Create `{module}/service.py`:
    ```python
-   class ItemService:
-       async def create(self, data: CreateItemRequest) -> Item:
+   class {Entity}Service:
+       async def create(self, data: Create{Entity}Request) -> {Entity}:
            ...
    ```
 
@@ -111,10 +111,10 @@ Router auto-registers to `/api/features/{name}/*`.
    from typing import Annotated
    from fastapi import Depends
 
-   def get_item_service() -> ItemService:
-       return ItemService()
+   def get_{entity}_service() -> {Entity}Service:
+       return {Entity}Service()
 
-   ItemServiceDep = Annotated[ItemService, Depends(get_item_service)]
+   {Entity}ServiceDep = Annotated[{Entity}Service, Depends(get_{entity}_service)]
    ```
 
 ---
