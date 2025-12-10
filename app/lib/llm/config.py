@@ -4,6 +4,10 @@ Shared configuration used across all LLM provider implementations.
 """
 
 from enum import Enum
+from typing import Literal
+
+# OpenRouter routing preference type
+OpenRouterRouting = Literal["floor", "nitro"] | None
 
 
 class LLMProviderType(str, Enum):
@@ -42,6 +46,20 @@ class Model(str, Enum):
     GROK_4_1_FAST_UID = "x-ai/grok-4.1-fast"
     GEMINI_2_5_PRO_UID = "google/gemini-2.5-pro"
     GEMINI_2_5_FLASH_UID = "google/gemini-2.5-flash"
+    GEMINI_2_5_FLASH_LITE_UID = "google/gemini-2.5-flash-lite"
+
+    def with_openrouter_routing(self, routing: OpenRouterRouting = None) -> str:
+        """Get model ID with optional OpenRouter routing suffix.
+
+        Args:
+            routing: OpenRouter routing preference
+                - "floor": Lowest cost routing
+                - "nitro": Fastest routing
+                - None: Default routing (no suffix)
+        """
+        if routing:
+            return f"{self.value}:{routing}"
+        return self.value
 
 
 class InvocationMode(str, Enum):
@@ -64,21 +82,12 @@ MODEL_PROVIDER_MAP: dict[Model, ModelProvider] = {
     Model.GROK_4_1_FAST_UID: ModelProvider.OPENROUTER,
     Model.GEMINI_2_5_PRO_UID: ModelProvider.OPENROUTER,
     Model.GEMINI_2_5_FLASH_UID: ModelProvider.OPENROUTER,
+    Model.GEMINI_2_5_FLASH_LITE_UID: ModelProvider.OPENROUTER,
 }
 
 
 def get_provider_for_model(model: Model) -> ModelProvider:
-    """Get the appropriate provider for a given model.
-
-    Args:
-        model: The model to look up
-
-    Returns:
-        The provider for the model
-
-    Raises:
-        ValueError: If model is not found in mapping
-    """
+    """Get the appropriate provider for a given model."""
     if model not in MODEL_PROVIDER_MAP:
         raise ValueError(f"Unknown model: {model}")
     return MODEL_PROVIDER_MAP[model]

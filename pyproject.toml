@@ -46,6 +46,8 @@ dependencies = [
     "livekit-plugins-langchain>=1.0.0",
     "deepgram-sdk>=3.10.0",
     "telnyx>=2.1.0",
+    "instructor>=1.13.0",
+    "google-genai>=1.0.0",
 ]
 
 [project.optional-dependencies]
