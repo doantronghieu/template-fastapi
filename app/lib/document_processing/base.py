@@ -1,16 +1,16 @@
-"""Text extractor abstract base class.
+"""Text extractor base class.
 
-Defines the interface for document text extraction providers.
+Defines the interface for text extraction providers.
 """
 
 from abc import ABC, abstractmethod
 from typing import Annotated
 
 from app.lib.document_processing.schemas.dto import (
+    DocumentSource,
     TextExtractionOptions,
     TextExtractionResult,
-    TextSource,
-    UrlTextSource,
+    UrlDocumentSource,
 )
 
 
@@ -20,7 +20,7 @@ class TextExtractor(ABC):
     @abstractmethod
     def extract_text(
         self,
-        source: Annotated[TextSource, "Source document to extract text from"],
+        source: Annotated[DocumentSource, "Document source to extract text from"],
         options: Annotated[
             TextExtractionOptions | None, "Provider-specific extraction options"
         ] = None,
@@ -30,10 +30,10 @@ class TextExtractor(ABC):
 
     def _check_url_support(
         self,
-        source: Annotated[TextSource, "Source to check for URL type"],
+        source: Annotated[DocumentSource, "Source to check for URL type"],
     ) -> None:
         """Raise NotImplementedError if source is URL and provider doesn't support it."""
-        if isinstance(source, UrlTextSource):
+        if isinstance(source, UrlDocumentSource):
             raise NotImplementedError(
                 f"{self.__class__.__name__} does not support URL extraction"
             )

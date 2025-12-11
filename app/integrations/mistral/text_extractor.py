@@ -10,12 +10,12 @@ from mistralai import Mistral
 from app.integrations.mistral.config import mistral_settings
 from app.lib.document_processing.base import TextExtractor
 from app.lib.document_processing.schemas.dto import (
-    BytesTextSource,
-    PathTextSource,
+    BytesDocumentSource,
+    DocumentSource,
+    PathDocumentSource,
     TextExtractionOptions,
     TextExtractionResult,
-    TextSource,
-    UrlTextSource,
+    UrlDocumentSource,
 )
 
 logger = logging.getLogger(__name__)
@@ -71,18 +71,18 @@ class MistralTextExtractor(TextExtractor):
 
     def extract_text(
         self,
-        source: Annotated[TextSource, "Input source (path, bytes, or URL)"],
+        source: Annotated[DocumentSource, "Input source (path, bytes, or URL)"],
         options: Annotated[
             TextExtractionOptions | None, "Provider-specific options"
         ] = None,
     ) -> TextExtractionResult:
         """Extract text from source using Mistral OCR."""
         try:
-            if isinstance(source, PathTextSource):
+            if isinstance(source, PathDocumentSource):
                 return self._extract_from_path(source)
-            elif isinstance(source, BytesTextSource):
+            elif isinstance(source, BytesDocumentSource):
                 return self._extract_from_bytes(source)
-            elif isinstance(source, UrlTextSource):
+            elif isinstance(source, UrlDocumentSource):
                 return self._extract_from_url(source)
             else:
                 return TextExtractionResult(
@@ -95,7 +95,7 @@ class MistralTextExtractor(TextExtractor):
 
     def _extract_from_path(
         self,
-        source: Annotated[PathTextSource, "Path source"],
+        source: Annotated[PathDocumentSource, "Path source"],
     ) -> TextExtractionResult:
         """Extract from file path."""
         if not source.path.exists():
@@ -104,12 +104,12 @@ class MistralTextExtractor(TextExtractor):
             )
         content = source.path.read_bytes()
         return self._extract_from_bytes(
-            BytesTextSource(content=content, filename=source.path.name)
+            BytesDocumentSource(content=content, filename=source.path.name)
         )
 
     def _extract_from_bytes(
         self,
-        source: Annotated[BytesTextSource, "Bytes source"],
+        source: Annotated[BytesDocumentSource, "Bytes source"],
     ) -> TextExtractionResult:
         """Extract from file bytes using data URL."""
         mime_type = self._get_mime_type(source.filename)
@@ -119,7 +119,7 @@ class MistralTextExtractor(TextExtractor):
 
     def _extract_from_url(
         self,
-        source: Annotated[UrlTextSource, "URL source"],
+        source: Annotated[UrlDocumentSource, "URL source"],
     ) -> TextExtractionResult:
         """Extract from URL."""
         mime_type = self._get_mime_type(source.url)

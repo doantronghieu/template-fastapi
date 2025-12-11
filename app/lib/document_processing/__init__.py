@@ -1,47 +1,57 @@
 """Document processing library with pluggable provider support.
 
-Provides a unified interface for text extraction from documents.
+Provides unified interfaces for document processing operations:
+- Text extraction (via TextExtractionService)
+- Future: conversion, OCR, metadata extraction, etc.
 """
 
 from app.lib.document_processing.base import TextExtractor
 from app.lib.document_processing.dependencies import (
+    TextExtractionServiceDep,
     TextExtractorDep,
-    get_text_extractor_dep,
+    get_text_extraction_service_dependency,
+    get_text_extractor_dependency,
 )
 from app.lib.document_processing.factory import get_text_extractor
 from app.lib.document_processing.schemas.dto import (
-    BytesTextSource,
-    DoclingOptions,
+    BytesDocumentSource,
     DoclingTextExtractionMode,
-    MistralOptions,
-    PathTextSource,
-    ProviderType,
+    DoclingTextExtractionOptions,
+    DocumentSource,
+    MistralTextExtractionOptions,
+    PathDocumentSource,
     TextExtractionOptions,
+    TextExtractionProvider,
     TextExtractionResult,
-    TextSource,
-    UrlTextSource,
+    UrlDocumentSource,
 )
+from app.lib.document_processing.service import TextExtractionService
 
 __all__ = [
-    # ABC
+    # Document sources (shared)
+    "DocumentSource",
+    "PathDocumentSource",
+    "BytesDocumentSource",
+    "UrlDocumentSource",
+    # Text extraction - ABC
     "TextExtractor",
-    # Source types
-    "TextSource",
-    "PathTextSource",
-    "BytesTextSource",
-    "UrlTextSource",
-    # Options
+    # Text extraction - Service
+    "TextExtractionService",
+    # Text extraction - Options
     "TextExtractionOptions",
-    "DoclingOptions",
-    "MistralOptions",
+    "DoclingTextExtractionOptions",
     "DoclingTextExtractionMode",
-    # Result
+    "MistralTextExtractionOptions",
+    # Text extraction - Result
     "TextExtractionResult",
-    # Enums
-    "ProviderType",
-    # Factory
+    # Text extraction - Enums
+    "TextExtractionProvider",
+    # Text extraction - Factory
     "get_text_extractor",
-    # Dependencies
-    "get_text_extractor_dep",
+    # Text extraction - Dependency providers
+    "get_text_extractor_dependency",
+    "get_text_extraction_service_dependency",
+    # Text extraction - Dependency type aliases
     "TextExtractorDep",
+    "TextExtractionServiceDep",
 ]

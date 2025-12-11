@@ -37,13 +37,13 @@ from tenacity import (
 from app.integrations.docling.config import docling_settings
 from app.lib.document_processing.base import TextExtractor
 from app.lib.document_processing.schemas.dto import (
-    BytesTextSource,
-    DoclingOptions,
+    BytesDocumentSource,
     DoclingTextExtractionMode,
-    PathTextSource,
+    DoclingTextExtractionOptions,
+    DocumentSource,
+    PathDocumentSource,
     TextExtractionOptions,
     TextExtractionResult,
-    TextSource,
 )
 
 # Suppress Docling markdown correction warnings (cosmetic, not errors)
@@ -219,7 +219,7 @@ class DoclingTextExtractor(TextExtractor):
 
     def extract_text(
         self,
-        source: Annotated[TextSource, "Source document to extract text from"],
+        source: Annotated[DocumentSource, "Document source to extract text from"],
         options: Annotated[TextExtractionOptions | None, "Extraction options"] = None,
     ) -> TextExtractionResult:
         """Extract text from document source using Docling."""
@@ -227,13 +227,13 @@ class DoclingTextExtractor(TextExtractor):
         self._check_url_support(source)
 
         # Parse options
-        docling_options = options if isinstance(options, DoclingOptions) else None
-        mode = (
-            docling_options.mode if docling_options else DoclingTextExtractionMode.LOCAL
+        docling_options = (
+            options if isinstance(options, DoclingTextExtractionOptions) else None
         )
+        mode = docling_options.mode if docling_options else DoclingTextExtractionMode.LOCAL
         enable_ocr = docling_options.enable_ocr if docling_options else False
 
-        if isinstance(source, PathTextSource):
+        if isinstance(source, PathDocumentSource):
             path = source.path
             if not path.exists():
                 return TextExtractionResult(
@@ -242,7 +242,7 @@ class DoclingTextExtractor(TextExtractor):
                 )
             return self._execute_extraction(str(path), mode, enable_ocr)
 
-        elif isinstance(source, BytesTextSource):
+        elif isinstance(source, BytesDocumentSource):
             doc_stream = DocumentStream(
                 name=source.filename, stream=BytesIO(source.content)
             )

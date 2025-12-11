@@ -1,10 +1,13 @@
-"""Text extractor factory for provider selection."""
+"""Text extractor factory.
+
+Factory for creating text extraction provider instances.
+"""
 
 from functools import lru_cache
 from typing import TYPE_CHECKING, Annotated
 
 from app.core.autodiscover import ModuleType, require_module
-from app.lib.document_processing.schemas.dto import ProviderType
+from app.lib.document_processing.schemas.dto import TextExtractionProvider
 
 if TYPE_CHECKING:
     from app.lib.document_processing.base import TextExtractor
@@ -12,12 +15,12 @@ if TYPE_CHECKING:
 
 @lru_cache(maxsize=2)
 def get_text_extractor(
-    provider: Annotated[ProviderType, "Provider to use"],
+    provider: Annotated[TextExtractionProvider, "Provider to use"],
 ) -> "TextExtractor":
-    """Get cached text extractor for provider."""
+    """Get cached text extractor instance for provider."""
     providers = {
-        ProviderType.DOCLING: _get_docling_text_extractor,
-        ProviderType.MISTRAL: _get_mistral_text_extractor,
+        TextExtractionProvider.DOCLING: _get_docling_text_extractor,
+        TextExtractionProvider.MISTRAL: _get_mistral_text_extractor,
     }
     return providers[provider]()
 

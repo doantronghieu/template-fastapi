@@ -1,6 +1,6 @@
 """Document processing schemas.
 
-Shared schemas for text extraction from documents.
+Shared schemas for document processing operations (text extraction, conversion, etc.).
 """
 
 from enum import Enum
@@ -10,7 +10,58 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 
 
-class ProviderType(str, Enum):
+# --- Document Source Types (shared across processing operations) ---
+
+
+class DocumentSource(BaseModel):
+    """Base class for document sources."""
+
+    @staticmethod
+    def from_path(
+        path: Annotated[str | Path, "File path to document"],
+    ) -> "PathDocumentSource":
+        """Create source from file path."""
+        return PathDocumentSource(path=Path(path))
+
+    @staticmethod
+    def from_bytes(
+        content: Annotated[bytes, "Raw file content"],
+        filename: Annotated[str, "Original filename"],
+    ) -> "BytesDocumentSource":
+        """Create source from bytes content."""
+        return BytesDocumentSource(content=content, filename=filename)
+
+    @staticmethod
+    def from_url(
+        url: Annotated[str, "Document URL"],
+    ) -> "UrlDocumentSource":
+        """Create source from URL."""
+        return UrlDocumentSource(url=url)
+
+
+class PathDocumentSource(DocumentSource):
+    """Document source from file path."""
+
+    path: Annotated[Path, "Path to document file"]
+
+
+class BytesDocumentSource(DocumentSource):
+    """Document source from bytes content."""
+
+    content: Annotated[bytes, "Raw file content"]
+    filename: Annotated[str, "Original filename for type detection"]
+
+
+class UrlDocumentSource(DocumentSource):
+    """Document source from URL."""
+
+    url: Annotated[str, "URL to document"]
+
+
+# --- Text Extraction Types ---
+
+
+class TextExtractionProvider(str, Enum):
     """Text extraction provider type."""
 
     DOCLING = "docling"
@@ -24,65 +75,14 @@ class DoclingTextExtractionMode(str, Enum):
     REMOTE = "remote"
 
 
-# --- Text Source Types ---
-
-
-class TextSource(BaseModel):
-    """Base class for text extraction sources."""
-
-    @staticmethod
-    def from_path(
-        path: Annotated[str | Path, "File path to document"],
-    ) -> "PathTextSource":
-        """Create source from file path."""
-        return PathTextSource(path=Path(path))
-
-    @staticmethod
-    def from_bytes(
-        content: Annotated[bytes, "Raw file content"],
-        filename: Annotated[str, "Original filename"],
-    ) -> "BytesTextSource":
-        """Create source from bytes content."""
-        return BytesTextSource(content=content, filename=filename)
-
-    @staticmethod
-    def from_url(
-        url: Annotated[str, "Document URL"],
-    ) -> "UrlTextSource":
-        """Create source from URL."""
-        return UrlTextSource(url=url)
-
-
-class PathTextSource(TextSource):
-    """Text source from file path."""
-
-    path: Annotated[Path, "Path to document file"]
-
-
-class BytesTextSource(TextSource):
-    """Text source from bytes content."""
-
-    content: Annotated[bytes, "Raw file content"]
-    filename: Annotated[str, "Original filename for type detection"]
-
-
-class UrlTextSource(TextSource):
-    """Text source from URL."""
-
-    url: Annotated[str, "URL to document"]
-
-
-# --- Extraction Options ---
-
-
 class TextExtractionOptions(BaseModel):
-    """Base class for provider-specific extraction options."""
+    """Base class for text extraction options."""
 
     pass
 
 
-class DoclingOptions(TextExtractionOptions):
-    """Docling-specific extraction options."""
+class DoclingTextExtractionOptions(TextExtractionOptions):
+    """Docling-specific text extraction options."""
 
     mode: Annotated[
         DoclingTextExtractionMode,
@@ -97,8 +97,8 @@ class DoclingOptions(TextExtractionOptions):
     ]
 
 
-class MistralOptions(TextExtractionOptions):
-    """Mistral-specific extraction options."""
+class MistralTextExtractionOptions(TextExtractionOptions):
+    """Mistral-specific text extraction options."""
 
     include_image_base64: Annotated[
         bool,
@@ -106,11 +106,8 @@ class MistralOptions(TextExtractionOptions):
     ]
 
 
-# --- Extraction Result ---
-
-
 class TextExtractionResult(BaseModel):
-    """Result of text extraction."""
+    """Result of text extraction operation."""
 
     success: Annotated[bool, Field(description="Whether extraction succeeded")]
     result: Annotated[
