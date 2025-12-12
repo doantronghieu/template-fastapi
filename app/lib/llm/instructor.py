@@ -8,10 +8,12 @@ from typing import Annotated
 
 import instructor
 import redis
+from groq import AsyncGroq
 from instructor.cache import BaseCache
 from openai import AsyncOpenAI
 
 from app.core.config import settings
+from app.lib.llm.config import ModelProvider
 
 
 class RedisCache(BaseCache):
@@ -38,17 +40,26 @@ def _get_redis_cache(ttl: int = 3600) -> RedisCache:
 
 
 def get_extraction_client(
+    provider: Annotated[ModelProvider, "Model provider"] = ModelProvider.OPENROUTER,
     mode: Annotated[instructor.Mode, "Extraction mode"] = instructor.Mode.JSON,
     cache_enabled: Annotated[bool, "Enable Redis caching"] = False,
     cache_ttl: Annotated[int, "Cache TTL in seconds"] = 3600,
 ) -> instructor.AsyncInstructor:
     """Get client for structured LLM extraction.
 
-    Uses OpenRouter as the provider for model access.
+    Supports OpenRouter and Groq providers.
     Optionally enables Redis caching for responses.
     """
     cache = _get_redis_cache(cache_ttl) if cache_enabled else None
 
+    if provider == ModelProvider.GROQ:
+        return instructor.from_groq(
+            AsyncGroq(api_key=settings.GROQ_API_KEY),
+            mode=instructor.Mode.JSON,  # Groq works best with JSON mode
+            cache=cache,
+        )
+
+    # Default: OpenRouter
     return instructor.from_openai(
         AsyncOpenAI(
             base_url="https://openrouter.ai/api/v1",

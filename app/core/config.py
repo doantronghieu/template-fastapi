@@ -69,13 +69,22 @@ class Settings(BaseSettings):
     )
     FLOWER_PORT: int = Field(..., description="Flower monitoring UI port")
 
-    # LLM
+    # -------------------------------------------------------------------------
+    # LLM Settings
+    # -------------------------------------------------------------------------
     LLM_PROVIDER: str = Field(
         default=LLMProviderType.LANGCHAIN.value,
         description="LLM provider (e.g., 'langchain', 'litellm')",
     )
+    GOOGLE_API_KEY: str = Field(..., description="Google API key for Gemini models")
+    OPENROUTER_API_KEY: str = Field(
+        default="", description="OpenRouter API key for unified model access"
+    )
+    GROQ_API_KEY: str = Field(default="", description="Groq API key for fast inference")
 
-    # Voice Providers
+    # -------------------------------------------------------------------------
+    # Voice Settings
+    # -------------------------------------------------------------------------
     STT_PROVIDER: str = Field(
         default=STTProviderType.DEEPGRAM.value,
         description="Speech-to-Text provider",
@@ -83,14 +92,6 @@ class Settings(BaseSettings):
     TTS_PROVIDER: str = Field(
         default=TTSProviderType.DEEPGRAM.value,
         description="Text-to-Speech provider",
-    )
-
-    # Google Generative AI
-    GOOGLE_API_KEY: str = Field(..., description="Google API key for Gemini models")
-
-    # OpenRouter
-    OPENROUTER_API_KEY: str = Field(
-        default="", description="OpenRouter API key for unified model access"
     )
 
     # Extensions
