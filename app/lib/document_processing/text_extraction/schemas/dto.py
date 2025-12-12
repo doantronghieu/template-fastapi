@@ -1,7 +1,4 @@
-"""Document processing schemas.
-
-Shared schemas for document processing operations (text extraction, conversion, etc.).
-"""
+"""Text extraction data transfer objects."""
 
 from enum import Enum
 from pathlib import Path
@@ -10,7 +7,7 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 
 
-# --- Document Source Types (shared across processing operations) ---
+# --- Document Source Types ---
 
 
 class DocumentSource(BaseModel):

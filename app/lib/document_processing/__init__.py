@@ -2,18 +2,22 @@
 
 Provides unified interfaces for document processing operations:
 - Text extraction (via TextExtractionService)
-- Future: conversion, OCR, metadata extraction, etc.
+- PDF conversion (via PdfConversionService)
 """
 
-from app.lib.document_processing.base import TextExtractor
-from app.lib.document_processing.dependencies import (
-    TextExtractionServiceDep,
-    TextExtractorDep,
-    get_text_extraction_service_dependency,
-    get_text_extractor_dependency,
+from app.lib.document_processing.pdf_conversion import (
+    PdfConversionOptions,
+    PdfConversionProvider,
+    PdfConversionResult,
+    PdfConversionService,
+    PdfConversionServiceDep,
+    PdfConverter,
+    PdfConverterDep,
+    get_pdf_conversion_service_dependency,
+    get_pdf_converter,
+    get_pdf_converter_dependency,
 )
-from app.lib.document_processing.factory import get_text_extractor
-from app.lib.document_processing.schemas.dto import (
+from app.lib.document_processing.text_extraction import (
     BytesDocumentSource,
     DoclingTextExtractionMode,
     DoclingTextExtractionOptions,
@@ -23,9 +27,15 @@ from app.lib.document_processing.schemas.dto import (
     TextExtractionOptions,
     TextExtractionProvider,
     TextExtractionResult,
+    TextExtractionService,
+    TextExtractionServiceDep,
+    TextExtractor,
+    TextExtractorDep,
     UrlDocumentSource,
+    get_text_extraction_service_dependency,
+    get_text_extractor,
+    get_text_extractor_dependency,
 )
-from app.lib.document_processing.service import TextExtractionService
 
 __all__ = [
     # Document sources (shared)
@@ -54,4 +64,22 @@ __all__ = [
     # Text extraction - Dependency type aliases
     "TextExtractorDep",
     "TextExtractionServiceDep",
+    # PDF conversion - ABC
+    "PdfConverter",
+    # PDF conversion - Service
+    "PdfConversionService",
+    # PDF conversion - Options
+    "PdfConversionOptions",
+    # PDF conversion - Result
+    "PdfConversionResult",
+    # PDF conversion - Enums
+    "PdfConversionProvider",
+    # PDF conversion - Factory
+    "get_pdf_converter",
+    # PDF conversion - Dependency providers
+    "get_pdf_converter_dependency",
+    "get_pdf_conversion_service_dependency",
+    # PDF conversion - Dependency type aliases
+    "PdfConverterDep",
+    "PdfConversionServiceDep",
 ]

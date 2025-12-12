@@ -48,6 +48,11 @@ dependencies = [
     "telnyx>=2.1.0",
     "instructor>=1.13.0",
     "google-genai>=1.0.0",
+    # PDF conversion
+    "weasyprint>=67.0",
+    "markdown-it-py>=3.0",
+    "pygments>=2.18",
+    "mdit-py-plugins>=0.4",
 ]
 
 [project.optional-dependencies]

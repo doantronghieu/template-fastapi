@@ -1,20 +1,17 @@
-"""Document processing dependency injection.
+"""Text extraction dependency injection.
 
-FastAPI dependencies for document processing providers and services.
+FastAPI dependencies for text extraction providers and services.
 """
 
 from typing import TYPE_CHECKING, Annotated
 
 from fastapi import Depends, Query
 
-from app.lib.document_processing.schemas.dto import TextExtractionProvider
+from app.lib.document_processing.text_extraction.schemas.dto import TextExtractionProvider
 
 if TYPE_CHECKING:
-    from app.lib.document_processing.base import TextExtractor
-    from app.lib.document_processing.service import TextExtractionService
-
-
-# --- Text Extraction Dependencies ---
+    from app.lib.document_processing.text_extraction.base import TextExtractor
+    from app.lib.document_processing.text_extraction.service import TextExtractionService
 
 
 def get_text_extractor_dependency(
@@ -24,7 +21,7 @@ def get_text_extractor_dependency(
     ] = TextExtractionProvider.DOCLING,
 ) -> "TextExtractor":
     """Provide text extractor instance for dependency injection."""
-    from app.lib.document_processing.factory import get_text_extractor
+    from app.lib.document_processing.text_extraction.factory import get_text_extractor
 
     return get_text_extractor(provider)
 
@@ -36,7 +33,7 @@ def get_text_extraction_service_dependency(
     ] = TextExtractionProvider.DOCLING,
 ) -> "TextExtractionService":
     """Provide text extraction service instance for dependency injection."""
-    from app.lib.document_processing.service import TextExtractionService
+    from app.lib.document_processing.text_extraction.service import TextExtractionService
 
     return TextExtractionService(default_provider=provider)
 

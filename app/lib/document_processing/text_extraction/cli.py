@@ -2,17 +2,17 @@
 """CLI tool for testing text extraction.
 
 Usage:
-    uv run python -m app.lib.document_processing.cli <file_path> [options]
+    uv run python -m app.lib.document_processing.text_extraction.cli <file_path> [options]
 
 Examples:
     # Docling (local)
-    uv run python -m app.lib.document_processing.cli tmp/data/document.pdf
-    uv run python -m app.lib.document_processing.cli tmp/data/document.pdf --mode remote
-    uv run python -m app.lib.document_processing.cli tmp/data/scanned.pdf --ocr
+    uv run python -m app.lib.document_processing.text_extraction.cli tmp/data/document.pdf
+    uv run python -m app.lib.document_processing.text_extraction.cli tmp/data/document.pdf --mode remote
+    uv run python -m app.lib.document_processing.text_extraction.cli tmp/data/scanned.pdf --ocr
 
     # Mistral OCR
-    uv run python -m app.lib.document_processing.cli tmp/data/document.pdf --provider mistral
-    uv run python -m app.lib.document_processing.cli --url https://example.com/doc.pdf --provider mistral
+    uv run python -m app.lib.document_processing.text_extraction.cli tmp/data/document.pdf --provider mistral
+    uv run python -m app.lib.document_processing.text_extraction.cli --url https://example.com/doc.pdf --provider mistral
 """
 
 import argparse
@@ -20,13 +20,13 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from app.lib.document_processing.factory import get_text_extractor
-from app.lib.document_processing.schemas.dto import (
-    DoclingOptions,
+from app.lib.document_processing.text_extraction.factory import get_text_extractor
+from app.lib.document_processing.text_extraction.schemas.dto import (
     DoclingTextExtractionMode,
-    MistralOptions,
-    ProviderType,
-    TextSource,
+    DoclingTextExtractionOptions,
+    DocumentSource,
+    MistralTextExtractionOptions,
+    TextExtractionProvider,
 )
 
 
@@ -61,31 +61,31 @@ def main():
     if not args.file_path and not args.url:
         parser.error("Either file_path or --url is required")
 
-    provider = ProviderType(args.provider)
+    provider = TextExtractionProvider(args.provider)
 
     # Build source
     if args.url:
-        source = TextSource.from_url(args.url)
+        source = DocumentSource.from_url(args.url)
         output_name = args.url.split("/")[-1].split("?")[0] or "document"
     else:
         path = Path(args.file_path)
-        source = TextSource.from_path(path)
+        source = DocumentSource.from_path(path)
         output_name = path.stem
 
     # Build options
-    if provider == ProviderType.DOCLING:
-        options = DoclingOptions(
+    if provider == TextExtractionProvider.DOCLING:
+        options = DoclingTextExtractionOptions(
             mode=DoclingTextExtractionMode(args.mode),
             enable_ocr=args.ocr,
         )
     else:
-        options = MistralOptions()
+        options = MistralTextExtractionOptions()
 
     output_path = Path(f"{output_name}.{provider.value}.md")
 
     print(f"Source:   {args.url or args.file_path}")
     print(f"Provider: {provider.value.upper()}")
-    if provider == ProviderType.DOCLING:
+    if provider == TextExtractionProvider.DOCLING:
         print(f"Mode:     {args.mode.upper()}")
         print(f"OCR:      {args.ocr}")
 

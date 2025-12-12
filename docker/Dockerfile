@@ -2,10 +2,19 @@ FROM python:3.12.11-slim-bookworm
 
 WORKDIR /app
 
-# Install system dependencies and security updates
+# Install system dependencies:
+# - curl: health checks
+# - WeasyPrint deps (libpango, libpangoft2, libharfbuzz-subset, fonts): PDF generation
+# See: https://doc.courtbouillon.org/weasyprint/stable/first_steps.html
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends curl && \
+    apt-get install -y --no-install-recommends \
+        curl \
+        libpango-1.0-0 \
+        libpangoft2-1.0-0 \
+        libharfbuzz-subset0 \
+        fonts-liberation \
+        fonts-dejavu-core && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

@@ -8,8 +8,8 @@ from typing import Annotated
 from mistralai import Mistral
 
 from app.integrations.mistral.config import mistral_settings
-from app.lib.document_processing.base import TextExtractor
-from app.lib.document_processing.schemas.dto import (
+from app.lib.document_processing.text_extraction.base import TextExtractor
+from app.lib.document_processing.text_extraction.schemas.dto import (
     BytesDocumentSource,
     DocumentSource,
     PathDocumentSource,

@@ -6,8 +6,8 @@ Internal service for text extraction from documents.
 from pathlib import Path
 from typing import Annotated
 
-from app.lib.document_processing.factory import get_text_extractor
-from app.lib.document_processing.schemas.dto import (
+from app.lib.document_processing.text_extraction.factory import get_text_extractor
+from app.lib.document_processing.text_extraction.schemas.dto import (
     DoclingTextExtractionMode,
     DoclingTextExtractionOptions,
     DocumentSource,
