@@ -29,12 +29,18 @@ app/
 └── main.py
 ```
 
-## Module Template
+## Module Templates
 
-All module types (`features/`, `lib/`, `integrations/`, `extensions/`) follow this template:
+| Template | Used By | Focus |
+|----------|---------|-------|
+| Base `{module}` | `features/`, `extensions/` | Full feature |
+| `{lib_core}` | `lib/` | Abstraction layer |
+| `{integration}` | `integrations/` | External API client |
+
+### Base Template (features/, extensions/)
 
 ```
-{module_name}/
+{module}/
 ├── __init__.py
 ├── router.py                   # API endpoints (auto-discovered)
 ├── webhooks.py                 # Webhook handlers (auto-discovered)
@@ -62,21 +68,79 @@ All module types (`features/`, `lib/`, `integrations/`, `extensions/`) follow th
     └── *.py                    # Unit tests (pytest)
 ```
 
+### {lib_core} (lib/)
+
+```
+{lib_core}/
+├── base.py             # ABC/Protocol interface
+├── factory.py          # get_{operation}() with @lru_cache
+└── ...                 # + any files from Base Template as needed
+```
+
+### {integration} (integrations/)
+
+```
+{integration}/
+├── client.py           # SDK wrapper singleton (@lru_cache)
+├── config.py           # Configurations
+├── {operation}.py      # Implements lib/ ABC
+└── ...                 # + any files from Base Template as needed
+```
+
+### lib/ Template
+
+| Placeholder | Description | Example |
+|-------------|-------------|---------|
+| `{capability}` | Domain/feature area | `document_processing` |
+| `{operation}` | Specific action within capability | `pdf_conversion` |
+| `{provider}` | Concrete implementation | `weasyprint` |
+
+```
+app/lib/
+├── shared/                     # [Optional] Shared across capabilities
+│
+└── {capability}/
+    ├── __init__.py
+    ├── {lib_core}              # Core abstraction files
+    ├── shared/                 # [Optional] Shared across operations
+    ├── providers/              # [Optional] Single operation → capability-level
+    │
+    ├── {operation}.py          # Simple operation (single file)
+    └── {operation}/            # [Optional] Complex operation
+        ├── __init__.py
+        ├── {lib_core}
+        └── providers/          # [Optional] Multi-operation → operation-level
+
+shared/
+└── {provider}/                 # Shared provider utilities
+
+providers/
+├── {provider}.py               # Simple provider (single file)
+└── {provider}/                 # [Optional] Complex provider (NO {lib_core})
+
+{provider}/                     # Internal structure (shared/ or providers/)
+├── {capability}/               # [Optional] Organize by capability
+│   └── {operation}.py
+└── {operation}.py              # Or flat structure
+```
+
+### integrations/ Template
+
+```
+app/integrations/{provider}/
+├── __init__.py
+└── {integration}               # Core files
+```
+
 ## Module Type Differences
 
-| Type | Discovery | Config | Typical Files | Purpose |
-|------|-----------|--------|---------------|---------|
-| `features/` | Auto | Always enabled | Full template | Core business logic |
-| `lib/` | Auto | Always enabled | `base.py`, `factory.py`, `router.py` | Provider-agnostic abstractions |
-| `integrations/` | Opt-out | `DISABLED_INTEGRATIONS=x,y` | `client.py`, `router.py`, `webhooks.py` | External API clients |
-| `extensions/` | Opt-in | `ENABLED_EXTENSIONS=a,b` | Full template | Optional add-ons |
+| Type | Discovery | Config | Purpose |
+|------|-----------|--------|---------|
+| `features/` | Auto | Always enabled | Core business logic |
+| `lib/` | Auto | Always enabled | Provider-agnostic abstractions |
+| `integrations/` | Opt-out | `DISABLED_INTEGRATIONS=x,y` | External API clients (with secrets) |
+| `extensions/` | Opt-in | `ENABLED_EXTENSIONS=a,b` | Optional add-ons |
 
-**lib/** additions:
-- `base.py` - Protocol/ABC defining common interface
-- `factory.py` - Factory function with `@lru_cache`
-
-**integrations/** additions:
-- `client.py` - SDK wrapper singleton (`@lru_cache`)
 
 ## Dependency Direction
 

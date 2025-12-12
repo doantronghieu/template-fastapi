@@ -4,10 +4,11 @@ Implementation patterns for provider-agnostic abstractions via Strategy pattern.
 
 ## Two-Layer Architecture
 
-| Layer | Location | Purpose |
-|-------|----------|---------|
-| Abstraction | `app/lib/{capability}/` | Protocol definitions, factory, dependencies |
-| Implementation | `app/integrations/{provider}/` | Concrete provider implementations |
+| Layer | Purpose |
+|-------|---------|
+| `lib/{capability}/` | Protocol definitions, factory, dependencies |
+| `integrations/{provider}/` | External API implementations (with secrets) |
+| `lib/{capability}/providers/` | Pure Python implementations (no secrets) |
 
 ## Decision Criteria
 
@@ -21,6 +22,20 @@ Implementation patterns for provider-agnostic abstractions via Strategy pattern.
 - Tightly coupled to provider-specific patterns
 - Abstraction would be premature
 
+## lib/ vs integrations/ Decision
+
+| Criteria | Use `integrations/` | Keep in `lib/` |
+|----------|---------------------|----------------|
+| API keys/secrets | ✅ | ❌ |
+| External HTTP calls | ✅ | ❌ |
+| Config in `.env` | ✅ | ❌ |
+| Pure Python libs | ❌ | ✅ |
+| Runs locally | ❌ | ✅ |
+
+**Self-contained libs** (pure Python, no secrets) → `lib/{capability}/providers/`
+
+**External API clients** (secrets required) → `integrations/{provider}/`
+
 ## Protocol vs ABC
 
 | Pattern | Use When |
@@ -30,11 +45,11 @@ Implementation patterns for provider-agnostic abstractions via Strategy pattern.
 
 ## Naming Conventions
 
-| Component | Pattern | Example |
-|-----------|---------|---------|
-| Protocol/ABC | `{Capability}Provider` | `LLMProvider` |
-| Implementation | `{Library}{Capability}Provider` | `LangChainLLMProvider` |
-| Provider file | `{capability}.py` | `llm.py` |
+| Component | Pattern |
+|-----------|---------|
+| Protocol/ABC | `{Operation}` or `{Operation}Provider` |
+| Implementation | `{Provider}{Operation}` |
+| Provider file | `{operation}.py` |
 
 ## Factory Pattern
 
@@ -43,15 +58,15 @@ Implementation patterns for provider-agnostic abstractions via Strategy pattern.
 from functools import lru_cache
 
 @lru_cache(maxsize=1)
-def get_{capability}_provider() -> {Capability}Provider:
-    providers: dict[str, Callable[[], {Capability}Provider]] = {
-        ProviderType.LIBRARY.value: _get_{library}_provider,
+def get_{operation}(provider: ProviderType) -> {Operation}:
+    providers: dict[str, Callable[[], {Operation}]] = {
+        ProviderType.{PROVIDER}.value: _get_{provider},
     }
-    # ... factory logic with lazy import
+    return providers[provider.value]()
 
-def _get_{library}_provider() -> {Capability}Provider:
-    from app.integrations.{library}.{capability} import {Library}{Capability}Provider
-    return {Library}{Capability}Provider()
+def _get_{provider}() -> {Operation}:
+    from app.integrations.{provider}.{operation} import {Provider}{Operation}
+    return {Provider}{Operation}()
 ```
 
 **Key points:**
@@ -67,18 +82,18 @@ from typing import TYPE_CHECKING, Annotated
 from fastapi import Depends
 
 if TYPE_CHECKING:
-    from app.lib.{capability}.base import {Capability}Provider
+    from app.lib.{capability}.base import {Operation}
 
-def get_{capability}_provider() -> "{Capability}Provider":
-    from app.lib.{capability}.factory import get_{capability}_provider as factory
-    return factory()
+def get_{operation}_dependency() -> "{Operation}":
+    from app.lib.{capability}.factory import get_{operation}
+    return get_{operation}()
 
-{Capability}ProviderDep = Annotated["{Capability}Provider", Depends(get_{capability}_provider)]
+{Operation}Dep = Annotated["{Operation}", Depends(get_{operation}_dependency)]
 ```
 
 **Key points:**
 - `TYPE_CHECKING` guard avoids circular imports
-- Type alias (`{Capability}ProviderDep`) for clean endpoint signatures
+- Type alias (`{Operation}Dep`) for clean endpoint signatures
 - Enables testing/mocking via FastAPI's dependency override
 
 ## API Organization
@@ -88,6 +103,13 @@ def get_{capability}_provider() -> "{Capability}Provider":
 | `app/lib/{capability}/router.py` | Provider-agnostic endpoints |
 | `app/integrations/{provider}/router.py` | Provider-specific endpoints |
 
+## When to Split Operations
+
+**Split indicators:**
+- Unrelated operations in same capability
+- Adding operation would mix concerns
+- Each operation needs own `{lib_core}` files
+
 ## Best Practices
 
 1. **Protocol-based interfaces** - `lib/` defines contracts only
@@ -95,3 +117,4 @@ def get_{capability}_provider() -> "{Capability}Provider":
 3. **Configuration-driven** - Settings determine implementation at runtime
 4. **Dependency injection** - FastAPI `Depends()` enables testing/mocking
 5. **Integration isolation** - Each provider in own package with own config
+6. **Self-contained libs in lib/** - No `integrations/` needed for pure Python packages
