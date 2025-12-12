@@ -35,13 +35,20 @@ class WeasyPrintPdfConverter(PdfConverter):
         self,
         options: Annotated[PdfConversionOptions | None, "Conversion options"],
     ) -> str:
-        """Get CSS for conversion, using custom or default."""
+        """Get CSS for conversion, merging default with custom if provided."""
         if options and options.css:
-            return options.css
+            # Merge default CSS with custom CSS
+            return f"{self._default_css}\n\n/* Custom styles */\n{options.css}"
         return self._default_css
 
-    def _wrap_html(self, content: str) -> str:
+    def _wrap_html(
+        self,
+        content: str,
+        template: Annotated[str | None, "Custom HTML template"] = None,
+    ) -> str:
         """Wrap markdown HTML in full document structure."""
+        if template:
+            return template.format(content=content)
         return f"""<!DOCTYPE html>
 <html>
 <head>
@@ -63,7 +70,8 @@ class WeasyPrintPdfConverter(PdfConverter):
         try:
             # Convert markdown to HTML
             html_content = self._md.render(markdown)
-            full_html = self._wrap_html(html_content)
+            template = options.html_template if options else None
+            full_html = self._wrap_html(html_content, template)
 
             # Get CSS
             css_content = self._get_css(options)

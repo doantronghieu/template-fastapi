@@ -18,6 +18,10 @@ class PdfConversionOptions(BaseModel):
     base_url: str | None = Field(
         default=None, description="Base URL for relative URLs in content"
     )
+    html_template: str | None = Field(
+        default=None,
+        description="Custom HTML template with {content} placeholder for markdown",
+    )
 
 
 class PdfConversionResult(BaseModel):
