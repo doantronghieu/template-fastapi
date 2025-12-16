@@ -118,9 +118,9 @@ uv run pytest -v -s tests/test_example.py::test_create  # Specific test verbose
 ## Common Issues
 
 **Database connection:**
-- Ensure `.env` has valid Supabase and Redis Cloud credentials
-- Test database `{POSTGRES_DB}_test` is auto-created on Supabase
-- Start infrastructure: `make infra-up` (Celery/Flower only - Redis on Redis Cloud)
+- Ensure `.env` has valid database and Redis credentials
+- Test database `{POSTGRES_DB}_test` is auto-created
+- Start infrastructure: `make infra-up`
 
 **Async errors:**
 - Use `async def` for async fixtures

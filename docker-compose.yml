@@ -1,6 +1,6 @@
 services:
   # FastAPI App (optional - for containerized deployment)
-  # For development, use: make dev (runs locally with Supabase and Redis Cloud)
+  # For development, use: make dev
   app:
     build:
       context: .
@@ -54,4 +54,4 @@ services:
       - envs/integrations/deepgram.env
     restart: unless-stopped
 
-# No volumes needed - using Supabase for database and Redis Cloud for caching
+# No volumes needed - using external database and Redis

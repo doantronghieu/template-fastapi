@@ -28,7 +28,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-FastAPI template with SQLModel (async SQLAlchemy), Supabase (PostgreSQL), Redis Cloud, Celery task queue, API documentation via Scalar, and modular extension system for specific customizations. Uses `uv` for dependency management and Docker Compose for infrastructure.
+FastAPI template with SQLModel (async SQLAlchemy), Supabase (PostgreSQL), Redis, Celery task queue, API documentation via Scalar, and modular extension system for specific customizations. Uses `uv` for dependency management and Docker Compose for infrastructure.
 
 **Tech Stack:**
 - **FastAPI** 0.118+ - Modern, fast web framework → See `app/main.py`
@@ -37,7 +37,7 @@ FastAPI template with SQLModel (async SQLAlchemy), Supabase (PostgreSQL), Redis 
 - **SQLAdmin** 0.20+ - Admin interface for database management → See `app/core/admin.py`
 - **Jinja2** 3.1+ - Server-side templating engine → See `app/core/templates.py`
 - **Supabase** - Cloud PostgreSQL database with Session Pooler → See `app/core/database.py`, `app/core/config.py`
-- **Redis Cloud** - Managed Redis for Celery broker/backend → See `app/core/celery.py`, `app/core/config.py`
+- **Redis** - Message broker and result backend for Celery → See `app/core/celery.py`, `app/core/config.py`
 - **Celery** 5.5+ - Distributed task queue → See `app/core/celery.py`, `app/tasks/*.py`
 - **Flower** 2.0+ - Celery monitoring UI → See `app/core/celery.py`
 - **pytest** - Testing framework → See `tests/conftest.py`, `tests/README.md`
@@ -49,7 +49,7 @@ FastAPI template with SQLModel (async SQLAlchemy), Supabase (PostgreSQL), Redis 
 ```bash
 # Initial setup (one-time)
 make setup                                    # Create venv and install dependencies
-cp .env.example .env                          # Configure environment variables (add Supabase and Redis Cloud credentials)
+cp .env.example .env                          # Configure environment variables
 make infra-up                                 # Start Celery worker, Beat scheduler, Flower
 make db-upgrade                               # Apply migrations to Supabase
 
@@ -96,7 +96,7 @@ make dev                                      # Start FastAPI server at http://1
 
 **See `docs/tech-stack.md` for:**
 - Database (SQLModel + Supabase)
-- Task Queue (Celery + Redis Cloud)
+- Task Queue (Celery + Redis)
 - Migrations (Alembic)
 - API Framework (FastAPI)
 - Admin Interface (SQLAdmin)
@@ -139,9 +139,9 @@ Required variables in `.env` (see `.env.example` for complete list)
 - **Package manager**: `uv` (not pip/poetry) - use `uv run` prefix for all Python commands
 - **Database**: Supabase (PostgreSQL) - dual engines async (asyncpg) for API, sync (psycopg2) for admin
 - **Supabase setup**: Uses Session Pooler for pgbouncer compatibility with statement cache disabled
-- **Redis**: Redis Cloud free tier (30MB, 30 max connections) - optimized for minimal connection usage
+- **Redis**: Used for Celery broker/backend
 - **API responses**: Scalar docs preferred over default Swagger UI
 - **Admin interface**: SQLAdmin at `/admin` with auto-discovery of ModelView classes
-- **Environment**: Required `.env` file with Supabase and Redis Cloud credentials (see `.env.example`)
-- **Docker**: Only for Celery and Flower - database is on Supabase cloud, Redis on Redis Cloud
-- **Celery worker**: Runs in Docker with concurrency=1 and pool=solo, aggressively optimized connection pooling
+- **Environment**: Required `.env` file with database and Redis credentials (see `.env.example`)
+- **Docker**: Only for Celery and Flower - database and Redis are external services
+- **Celery worker**: Runs in Docker with concurrency=1 and pool=solo

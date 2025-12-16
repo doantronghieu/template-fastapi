@@ -5,7 +5,7 @@ Complete guide to the technologies used in this project.
 ## Table of Contents
 
 - [Database (SQLModel + Supabase)](#database-sqlmodel--supabase)
-- [Task Queue (Celery + Redis Cloud)](#task-queue-celery--redis-cloud)
+- [Task Queue (Celery + Redis)](#task-queue-celery--redis)
 - [Migrations (Alembic)](#migrations-alembic)
 - [API Framework (FastAPI)](#api-framework-fastapi)
 - [Admin Interface (SQLAdmin)](#admin-interface-sqladmin)
@@ -57,11 +57,11 @@ Complete guide to the technologies used in this project.
 
 ---
 
-## Task Queue (Celery + Redis Cloud)
+## Task Queue (Celery + Redis)
 
 **Tech Stack:**
 - Celery 5.5+ - Distributed task queue for async background jobs
-- Redis Cloud - Message broker and result backend
+- Redis - Message broker and result backend
 - Redbeat - Redis-based Beat scheduler for periodic tasks
 - Flower 2.0+ - Monitoring UI at http://127.0.0.1:5555
 
@@ -69,9 +69,7 @@ Complete guide to the technologies used in this project.
 
 ### Broker and Backend
 
-- Connection: `REDIS_URL` directly (Redis Cloud free tier supports single database only)
-- Max connections: 30 (free tier limit)
-- Optimized usage: ~10 connections total (~33% usage)
+- Connection: `REDIS_URL` environment variable
 - See `app/core/config.py` for URL construction
 
 ### Task Discovery
@@ -100,19 +98,6 @@ Complete guide to the technologies used in this project.
 - `celery-beat`: Periodic task scheduler
 - `flower`: Web-based monitoring at http://127.0.0.1:5555
 - See `docker-compose.yml` and `Makefile` for infrastructure commands
-
-### Redis Cloud Free Tier Optimization (30 connection limit)
-
-**Target:** <10 connections (~33% usage) to stay below 80% alert threshold
-
-**Connection Budget Breakdown:**
-- FastAPI Producer: 2 connections (1 broker + 1 result backend)
-- Celery Worker: 3 connections (1 broker + 1 result + 1 worker pool)
-- Celery Beat: 3 connections (1 broker + 1 Redbeat scheduler + 1 result)
-- Flower: 2 connections (1 broker + 1 result for monitoring)
-- **Total:** ~10 connections (leaves 20 connections buffer for spikes)
-
-Configuration uses aggressive connection pooling limits to minimize usage.
 
 ### Task ID Context Pattern
 

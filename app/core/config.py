@@ -38,10 +38,10 @@ class Settings(BaseSettings):
     # Database
     DATABASE_ECHO: bool = Field(default=False, description="Enable SQL query logging")
 
-    # Redis Cloud
+    # Redis
     REDIS_URL: str = Field(
         ...,
-        description="Redis Cloud connection URL (e.g., redis://user:pass@host:port)",
+        description="Redis connection URL (e.g., redis://user:pass@host:port)",
     )
 
     # Celery
@@ -147,18 +147,12 @@ class Settings(BaseSettings):
 
     @property
     def CELERY_BROKER_URL(self) -> str:
-        """Construct Celery broker URL from Redis Cloud URL.
-
-        Redis Cloud free tier only supports database 0.
-        """
+        """Celery broker URL from Redis URL."""
         return self.REDIS_URL
 
     @property
     def CELERY_RESULT_BACKEND(self) -> str:
-        """Construct Celery result backend URL from Redis Cloud URL.
-
-        Redis Cloud free tier only supports database 0.
-        """
+        """Celery result backend URL from Redis URL."""
         return self.REDIS_URL
 
 

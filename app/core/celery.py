@@ -1,9 +1,8 @@
 """Celery Task Queue Configuration.
 
-Configures Celery with Redis Cloud broker/backend, Redbeat scheduler, and auto-discovery.
-Optimized for Redis Cloud free tier (30 connection limit, ~33% usage target).
+Configures Celery with Redis broker/backend, Redbeat scheduler, and auto-discovery.
 
-See docs/tech-stack.md for Celery configuration and connection optimization details.
+See docs/tech-stack.md for Celery configuration details.
 See docs/patterns/logging.md for task ID context pattern.
 """
 
@@ -93,16 +92,9 @@ celery_app.conf.update(
     # Worker configuration
     worker_prefetch_multiplier=settings.CELERY_WORKER_PREFETCH_MULTIPLIER,
     worker_max_tasks_per_child=settings.CELERY_WORKER_MAX_TASKS_PER_CHILD,
-    # Redis Cloud free tier optimization (30 connection limit)
-    # Target: <10 connections (~33% usage) to stay well below 80% alert threshold
-    # Connection budget breakdown (target: <10 total, ~33% usage):
-    #   - FastAPI Producer: 2 connections (1 broker + 1 result backend)
-    #   - Celery Worker: 3 connections (1 broker + 1 result + 1 worker pool)
-    #   - Celery Beat: 3 connections (1 broker + 1 Redbeat scheduler + 1 result)
-    #   - Flower: 2 connections (1 broker + 1 result for monitoring)
-    #   = ~10 connections total (leaves 20 connections buffer for spikes)
-    broker_pool_limit=1,  # Limit broker connection pool size per process
-    redis_max_connections=2,  # Max Redis connections per process (broker + result)
+    # Connection pooling
+    broker_pool_limit=1,
+    redis_max_connections=2,
     # Connection retry and resilience
     broker_connection_retry=True,
     broker_connection_retry_on_startup=True,

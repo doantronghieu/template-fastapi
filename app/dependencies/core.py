@@ -27,21 +27,7 @@ def get_settings() -> Settings:
 
 
 async def get_redis_client() -> redis.Redis:
-    """
-    Get or create Redis client singleton.
-
-    Returns:
-        redis.Redis: Async Redis client instance with UTF-8 encoding
-
-    Implementation:
-        - Singleton pattern: Single connection shared across application
-        - decode_responses=True: Auto-decode bytes to strings
-        - Connects to Redis Cloud (same instance used by Celery)
-
-    Note:
-        Redis Cloud free tier has connection limit. Singleton prevents
-        connection exhaustion by reusing one client per app instance.
-    """
+    """Get or create Redis client singleton."""
     global _redis_client
     if _redis_client is None:
         _redis_client = await redis.from_url(

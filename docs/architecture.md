@@ -96,7 +96,7 @@ async def endpoint(service: {Service}Dep):
 | Configuration | `app/core/config.py` | Pydantic BaseSettings, `.env` loading |
 | Database | `app/core/database.py` | Dual engine (async/sync), Supabase PostgreSQL |
 | Auto-Discovery | `app/core/autodiscover.py` | Convention-based registration |
-| Task Queue | `app/core/celery.py` | Celery with Redis Cloud, auto-discovered tasks/schedules |
+| Task Queue | `app/core/celery.py` | Celery with Redis, auto-discovered tasks/schedules |
 | API Entry | `app/main.py` | FastAPI app, Scalar UI at `/scalar`, SQLAdmin at `/admin` |
 | Templates | `app/core/templates.py` | Jinja2Templates instance |
 | Admin | `app/core/admin.py` | SQLAdmin with ModelView auto-discovery |
