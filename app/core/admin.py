@@ -56,7 +56,11 @@ def setup_admin(app) -> Admin:
             admin.add_view(obj)
 
     # === Auto-discovered Admin Views ===
-    for module_type in [ModuleType.FEATURES, ModuleType.INTEGRATIONS, ModuleType.EXTENSIONS]:
+    for module_type in [
+        ModuleType.FEATURES,
+        ModuleType.INTEGRATIONS,
+        ModuleType.EXTENSIONS,
+    ]:
         autodiscover_admin(module_type, admin)
 
     return admin

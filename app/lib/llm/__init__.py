@@ -13,8 +13,8 @@ from app.lib.llm.config import (
     get_provider_for_model,
 )
 from app.lib.llm.dependencies import LLMProviderDep, get_llm_provider
-from app.lib.llm.utils import create_loader
 from app.lib.llm.schemas.api import CreateModelRequest, InvokeModelRequest
+from app.lib.llm.utils import create_loader, create_rate_limit_retry
 
 __all__ = [
     # ABC
@@ -33,4 +33,6 @@ __all__ = [
     "InvokeModelRequest",
     # Resources
     "create_loader",
+    # Retry
+    "create_rate_limit_retry",
 ]

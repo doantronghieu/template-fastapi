@@ -16,9 +16,7 @@ class PdfConverter(ABC):
     def convert_markdown(
         self,
         markdown: Annotated[str, "Markdown content to convert"],
-        options: Annotated[
-            PdfConversionOptions | None, "Conversion options"
-        ] = None,
+        options: Annotated[PdfConversionOptions | None, "Conversion options"] = None,
     ) -> PdfConversionResult:
         """Convert markdown string to PDF bytes."""
         ...

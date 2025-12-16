@@ -7,7 +7,9 @@ from functools import lru_cache
 from typing import TYPE_CHECKING, Annotated
 
 from app.core.autodiscover import ModuleType, require_module
-from app.lib.document_processing.text_extraction.schemas.dto import TextExtractionProvider
+from app.lib.document_processing.text_extraction.schemas.dto import (
+    TextExtractionProvider,
+)
 
 if TYPE_CHECKING:
     from app.lib.document_processing.text_extraction.base import TextExtractor

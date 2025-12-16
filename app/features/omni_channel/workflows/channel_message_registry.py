@@ -92,7 +92,9 @@ class ChannelMessageHandlerRegistry:
             logger.info(f"✓ Handler: {handler.__class__.__name__} ({extension_name})")
         elif self._default_handler:
             self._selected_handler = self._default_handler
-            logger.info(f"✓ Handler: {self._default_handler.__class__.__name__} (default)")
+            logger.info(
+                f"✓ Handler: {self._default_handler.__class__.__name__} (default)"
+            )
         else:
             raise RuntimeError("No handler available - default handler not configured")
 

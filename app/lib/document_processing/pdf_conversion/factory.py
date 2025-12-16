@@ -11,7 +11,9 @@ if TYPE_CHECKING:
 
 @lru_cache(maxsize=1)
 def get_pdf_converter(
-    provider: Annotated[PdfConversionProvider, "Provider to use"] = PdfConversionProvider.WEASYPRINT,
+    provider: Annotated[
+        PdfConversionProvider, "Provider to use"
+    ] = PdfConversionProvider.WEASYPRINT,
 ) -> "PdfConverter":
     """Get cached PDF converter instance for provider."""
     providers = {

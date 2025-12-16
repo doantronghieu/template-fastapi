@@ -77,7 +77,9 @@ def _format_tag(name: str, template: str) -> str:
     return template.format(name=name, Name=name.replace("_", " ").title())
 
 
-def _build_module_path(module_type: ModuleType, module_name: str, submodule: str) -> str:
+def _build_module_path(
+    module_type: ModuleType, module_name: str, submodule: str
+) -> str:
     """Build full Python module path."""
     return f"app.{module_type.value}.{module_name}.{submodule}"
 
@@ -126,9 +128,7 @@ def get_module_dirs(
         return []
 
     dirs = [
-        d
-        for d in base_path.iterdir()
-        if d.is_dir() and (d / "__init__.py").exists()
+        d for d in base_path.iterdir() if d.is_dir() and (d / "__init__.py").exists()
     ]
 
     # Apply filters from env vars if none provided
@@ -178,7 +178,9 @@ class ModuleDisabledError(Exception):
         if message:
             msg = message
         elif module_type == ModuleType.INTEGRATIONS:
-            msg = f"Integration '{name}' is disabled. Remove from DISABLED_INTEGRATIONS."
+            msg = (
+                f"Integration '{name}' is disabled. Remove from DISABLED_INTEGRATIONS."
+            )
         elif module_type == ModuleType.EXTENSIONS:
             msg = f"Extension '{name}' is disabled. Add to ENABLED_EXTENSIONS."
         else:
@@ -230,7 +232,9 @@ def get_module_env_path(
 def generate_module_env(
     module_type: ModuleType,
     config_file_path: Annotated[str, "pass __file__ from config.py"],
-    settings_class: Annotated[type[BaseSettings], "Pydantic Settings class to introspect"],
+    settings_class: Annotated[
+        type[BaseSettings], "Pydantic Settings class to introspect"
+    ],
 ) -> None:
     """Generate .env template file for module if it doesn't exist."""
     module_name = Path(config_file_path).parent.name
@@ -263,7 +267,9 @@ def autodiscover_routers(
     enabled: Annotated[list[str] | None, "opt-in filter"] = None,
     disabled: Annotated[list[str] | None, "opt-out filter"] = None,
     prefix_template: Annotated[str, "{name} replaced with module name"] = "/{name}",
-    tags_template: Annotated[str | None, "{Name}=title case, {name}=lowercase"] = "{Name}",
+    tags_template: Annotated[
+        str | None, "{Name}=title case, {name}=lowercase"
+    ] = "{Name}",
     file_name: str = "router.py",
     include_in_schema: bool = True,
 ) -> list[str]:
@@ -280,7 +286,9 @@ def autodiscover_routers(
 
         if module and hasattr(module, "router"):
             prefix = prefix_template.format(name=module_dir.name)
-            tags = [_format_tag(module_dir.name, tags_template)] if tags_template else None
+            tags = (
+                [_format_tag(module_dir.name, tags_template)] if tags_template else None
+            )
             parent_router.include_router(
                 module.router,
                 prefix=prefix,
@@ -316,7 +324,9 @@ def autodiscover_webhooks(
 
         if module and hasattr(module, "router"):
             prefix = prefix_template.format(name=module_dir.name)
-            tags = [_format_tag(module_dir.name, tags_template)] if tags_template else None
+            tags = (
+                [_format_tag(module_dir.name, tags_template)] if tags_template else None
+            )
             parent_router.include_router(module.router, prefix=prefix, tags=tags)
             registered.append(module_dir.name)
 

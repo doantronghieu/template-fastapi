@@ -1,9 +1,35 @@
-"""LLM resource loaders for prompts and schemas."""
+"""LLM utilities for prompts, schemas, and retry handling."""
 
 import json
 from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated
+
+from tenacity import (
+    retry,
+    retry_if_exception,
+    stop_after_attempt,
+    wait_random_exponential,
+)
+
+
+def _is_rate_limit_error(exc: BaseException) -> bool:
+    """Check if exception is a 429 rate limit error."""
+    return getattr(exc, "status_code", None) == 429
+
+
+def create_rate_limit_retry(
+    max_retries: int = 6,
+    min_wait: int = 1,
+    max_wait: int = 60,
+):
+    """Create a retry decorator for rate limit errors (429)."""
+    return retry(
+        retry=retry_if_exception(_is_rate_limit_error),
+        wait=wait_random_exponential(min=min_wait, max=max_wait),
+        stop=stop_after_attempt(max_retries),
+        reraise=True,
+    )
 
 
 def load_prompt(
@@ -36,4 +62,4 @@ def create_loader(
     return _load_prompt, _load_schema
 
 
-__all__ = ["create_loader", "load_prompt"]
+__all__ = ["create_loader", "create_rate_limit_retry", "load_prompt"]

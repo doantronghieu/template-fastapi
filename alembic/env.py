@@ -33,7 +33,11 @@ for model_file in models_path.glob("*.py"):
         module_name = f"app.models.{model_file.stem}"
         __import__(module_name)
 
-for module_type in [ModuleType.FEATURES, ModuleType.INTEGRATIONS, ModuleType.EXTENSIONS]:
+for module_type in [
+    ModuleType.FEATURES,
+    ModuleType.INTEGRATIONS,
+    ModuleType.EXTENSIONS,
+]:
     autodiscover_models(module_type)
 
 # === Alembic Config ===

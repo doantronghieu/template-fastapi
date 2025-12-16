@@ -230,7 +230,9 @@ class DoclingTextExtractor(TextExtractor):
         docling_options = (
             options if isinstance(options, DoclingTextExtractionOptions) else None
         )
-        mode = docling_options.mode if docling_options else DoclingTextExtractionMode.LOCAL
+        mode = (
+            docling_options.mode if docling_options else DoclingTextExtractionMode.LOCAL
+        )
         enable_ocr = docling_options.enable_ocr if docling_options else False
 
         if isinstance(source, PathDocumentSource):

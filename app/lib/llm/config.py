@@ -100,8 +100,12 @@ MODEL_CONFIG: dict[Model, ModelConfig] = {
     # OpenRouter models (via unified API)
     Model.GROK_4_1_FAST_UID: ModelConfig(ModelProvider.OPENROUTER, 131_072, 32_768),
     Model.GEMINI_2_5_PRO_UID: ModelConfig(ModelProvider.OPENROUTER, 1_048_576, 65_536),
-    Model.GEMINI_2_5_FLASH_UID: ModelConfig(ModelProvider.OPENROUTER, 1_048_576, 65_536),
-    Model.GEMINI_2_5_FLASH_LITE_UID: ModelConfig(ModelProvider.OPENROUTER, 1_048_576, 65_536),
+    Model.GEMINI_2_5_FLASH_UID: ModelConfig(
+        ModelProvider.OPENROUTER, 1_048_576, 65_536
+    ),
+    Model.GEMINI_2_5_FLASH_LITE_UID: ModelConfig(
+        ModelProvider.OPENROUTER, 1_048_576, 65_536
+    ),
 }
 
 # Provider-specific concurrency limits (max parallel LLM calls)

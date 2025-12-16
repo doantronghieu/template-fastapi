@@ -43,7 +43,9 @@ if is_module_enabled(ModuleType.INTEGRATIONS, "messenger"):
     @celery_app.task(name=f"{TASK_PREFIX}.process_messenger_message")
     def process_messenger_message(
         sender_id: Annotated[str, "User's Page-Scoped ID (PSID) from Facebook"],
-        message_content: Annotated[str, "User's message text or attachment description"],
+        message_content: Annotated[
+            str, "User's message text or attachment description"
+        ],
         conversation_id: Annotated[
             str, "Conversation ID (same as sender_id for Messenger)"
         ],
@@ -112,7 +114,9 @@ if is_module_enabled(ModuleType.INTEGRATIONS, "messenger"):
                         # Check if response has .messages attribute (duck typing for AIResponse)
                         if hasattr(ai_response, "messages"):
                             # Use MessageSenderService for multi-message sending
-                            sender_service = MessageSenderService(session, messenger_client)
+                            sender_service = MessageSenderService(
+                                session, messenger_client
+                            )
                             send_stats = await sender_service.send_response(
                                 recipient_id=sender_id,
                                 response=ai_response,
@@ -134,7 +138,9 @@ if is_module_enabled(ModuleType.INTEGRATIONS, "messenger"):
                             )
 
                     except Exception:
-                        logger.error(f"Task failed for sender {sender_id}", exc_info=True)
+                        logger.error(
+                            f"Task failed for sender {sender_id}", exc_info=True
+                        )
                         raise
             finally:
                 await engine.dispose()
@@ -201,7 +207,9 @@ if is_module_enabled(ModuleType.INTEGRATIONS, "messenger"):
                                 sender_id, elements
                             )
                         else:
-                            raise ValueError(f"Unsupported message_type: {message_type}")
+                            raise ValueError(
+                                f"Unsupported message_type: {message_type}"
+                            )
 
                         logger.info(
                             f"Special message sent: sender={sender_id} type={message_type} "

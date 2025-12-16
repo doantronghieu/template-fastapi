@@ -13,7 +13,11 @@ from contextvars import ContextVar
 
 from celery import Celery, signals
 
-from app.core.autodiscover import ModuleType, autodiscover_beat_schedules, autodiscover_tasks
+from app.core.autodiscover import (
+    ModuleType,
+    autodiscover_beat_schedules,
+    autodiscover_tasks,
+)
 from app.core.config import settings
 
 # Context variable for task ID (automatically set via Celery signals)
@@ -28,6 +32,7 @@ def get_task_id() -> str:
     """
     task_id = task_id_var.get()
     return f"[{task_id[:8]}] " if task_id else ""
+
 
 # Configure basic logging early for module-level initialization
 # This ensures logs during import are visible before Celery's logging setup
@@ -44,7 +49,11 @@ logger = logging.getLogger(__name__)
 # === Discover Task Modules ===
 task_modules = [settings.CELERY_TASKS_MODULE]  # Core tasks
 
-for module_type in [ModuleType.FEATURES, ModuleType.INTEGRATIONS, ModuleType.EXTENSIONS]:
+for module_type in [
+    ModuleType.FEATURES,
+    ModuleType.INTEGRATIONS,
+    ModuleType.EXTENSIONS,
+]:
     task_modules += autodiscover_tasks(module_type)
 
 
@@ -59,7 +68,11 @@ celery_app = Celery(
 # === Discover Beat Schedules ===
 beat_schedules = {}
 
-for module_type in [ModuleType.FEATURES, ModuleType.INTEGRATIONS, ModuleType.EXTENSIONS]:
+for module_type in [
+    ModuleType.FEATURES,
+    ModuleType.INTEGRATIONS,
+    ModuleType.EXTENSIONS,
+]:
     beat_schedules.update(autodiscover_beat_schedules(module_type))
 
 

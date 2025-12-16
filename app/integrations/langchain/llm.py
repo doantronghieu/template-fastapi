@@ -50,6 +50,8 @@ class LangChainLLMProvider(LLMProvider):
             timeout=httpx.Timeout(300.0),
         )
 
+        max_retries = kwargs.pop("max_retries", 2)
+
         # OpenRouter uses ChatOpenAI with custom base_url
         if provider_value == ModelProvider.OPENROUTER.value:
             chat_model = ChatOpenAI(
@@ -57,6 +59,7 @@ class LangChainLLMProvider(LLMProvider):
                 api_key=settings.OPENROUTER_API_KEY,
                 base_url=OPENROUTER_BASE_URL,
                 temperature=temperature,
+                max_retries=max_retries,
                 http_async_client=http_client,
                 **kwargs,
             )
@@ -65,6 +68,7 @@ class LangChainLLMProvider(LLMProvider):
                 model=model_value,
                 model_provider=provider_value,
                 temperature=temperature,
+                max_retries=max_retries,
                 http_async_client=http_client,
                 **kwargs,
             )

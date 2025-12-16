@@ -7,11 +7,15 @@ from typing import TYPE_CHECKING, Annotated
 
 from fastapi import Depends, Query
 
-from app.lib.document_processing.text_extraction.schemas.dto import TextExtractionProvider
+from app.lib.document_processing.text_extraction.schemas.dto import (
+    TextExtractionProvider,
+)
 
 if TYPE_CHECKING:
     from app.lib.document_processing.text_extraction.base import TextExtractor
-    from app.lib.document_processing.text_extraction.service import TextExtractionService
+    from app.lib.document_processing.text_extraction.service import (
+        TextExtractionService,
+    )
 
 
 def get_text_extractor_dependency(
@@ -33,7 +37,9 @@ def get_text_extraction_service_dependency(
     ] = TextExtractionProvider.DOCLING,
 ) -> "TextExtractionService":
     """Provide text extraction service instance for dependency injection."""
-    from app.lib.document_processing.text_extraction.service import TextExtractionService
+    from app.lib.document_processing.text_extraction.service import (
+        TextExtractionService,
+    )
 
     return TextExtractionService(default_provider=provider)
 

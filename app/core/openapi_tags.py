@@ -19,10 +19,19 @@ class TagGroup(str, Enum):
 
 # Static core tags that don't come from auto-discovered modules
 CORE_TAGS: dict[str, dict] = {
-    "Health": {"description": "Health check and status endpoints", "group": TagGroup.CORE},
+    "Health": {
+        "description": "Health check and status endpoints",
+        "group": TagGroup.CORE,
+    },
     "Examples": {"description": "Example CRUD operations", "group": TagGroup.CORE},
-    "Tasks": {"description": "Celery background task management", "group": TagGroup.CORE},
-    "Webhooks": {"description": "Webhook endpoints for external integrations", "group": TagGroup.CORE},
+    "Tasks": {
+        "description": "Celery background task management",
+        "group": TagGroup.CORE,
+    },
+    "Webhooks": {
+        "description": "Webhook endpoints for external integrations",
+        "group": TagGroup.CORE,
+    },
 }
 
 # Tag description prefixes by group
@@ -90,7 +99,10 @@ def get_openapi_tags_from_routes(app: "FastAPI") -> list[dict]:
                         "group": group,
                     }
 
-    return [{"name": info["name"], "description": info["description"]} for info in discovered_tags.values()]
+    return [
+        {"name": info["name"], "description": info["description"]}
+        for info in discovered_tags.values()
+    ]
 
 
 def get_tag_groups_from_routes(app: "FastAPI") -> list[dict]:
@@ -102,7 +114,11 @@ def get_tag_groups_from_routes(app: "FastAPI") -> list[dict]:
         tags = getattr(route, "tags", [])
 
         for tag in tags:
-            group = CORE_TAGS[tag]["group"] if tag in CORE_TAGS else _infer_group_from_path(path)
+            group = (
+                CORE_TAGS[tag]["group"]
+                if tag in CORE_TAGS
+                else _infer_group_from_path(path)
+            )
             if group not in groups:
                 groups[group] = []
             if tag not in groups[group]:
