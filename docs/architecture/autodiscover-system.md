@@ -9,7 +9,7 @@ Convention-based module discovery. Drop files with correct names → auto-regist
 | `features/` | Auto | Always enabled | `/api/features/{name}/*` | `/api/webhooks/{name}/*` |
 | `lib/` | Auto | Always enabled | `/api/lib/{name}/*` | — |
 | `integrations/` | Opt-out | `DISABLED_INTEGRATIONS=x,y` | `/api/integrations/{name}/*` | `/api/webhooks/{name}/*` |
-| `extensions/` | Opt-in | `ENABLED_EXTENSIONS=a,b` | `/api/extensions/{name}/*` | `/api/webhooks/{name}/*` |
+| `extensions/` | Opt-in | `ENABLED_EXTENSIONS=a,b` | `/api/{name}/*` | `/api/webhooks/{name}/*` |
 
 ## File Conventions
 

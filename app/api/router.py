@@ -24,7 +24,7 @@ ROUTER_CONFIG = {
     },
     ModuleType.LIB: {"prefix_template": "/lib/{name}"},
     ModuleType.INTEGRATIONS: {"prefix_template": "/integrations/{name}"},
-    ModuleType.EXTENSIONS: {"prefix_template": "/extensions/{name}"},
+    ModuleType.EXTENSIONS: {"prefix_template": "/{name}"},
 }
 
 for module_type, config in ROUTER_CONFIG.items():
