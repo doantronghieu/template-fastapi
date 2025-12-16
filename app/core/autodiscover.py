@@ -13,7 +13,7 @@ from enum import StrEnum
 from functools import wraps
 from pathlib import Path
 from types import ModuleType as PyModuleType
-from typing import TYPE_CHECKING, Annotated, Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Annotated, Any, Callable, Generator, TypeVar
 
 from dotenv import load_dotenv
 
@@ -75,6 +75,11 @@ def _is_debug_mode() -> bool:
 def _format_tag(name: str, template: str) -> str:
     """Format a tag template with module name variations."""
     return template.format(name=name, Name=name.replace("_", " ").title())
+
+
+def _name_to_url_slug(name: str) -> str:
+    """Convert module name to URL-friendly slug (underscore → hyphen)."""
+    return name.replace("_", "-")
 
 
 def _build_module_path(
@@ -459,3 +464,76 @@ def auto_import_modules(
             logger.debug(f"✓ Imported: {module_path}")
 
     return imported
+
+
+# =============================================================================
+# Extension Feature Discovery
+# =============================================================================
+
+
+def _iter_extension_features(
+    enabled: list[str] | None = None,
+) -> Generator[tuple[Path, Path], None, None]:
+    """Yield (ext_dir, feature_dir) pairs from enabled extensions."""
+    for ext_dir in get_module_dirs(ModuleType.EXTENSIONS, enabled=enabled):
+        features_dir = ext_dir / "features"
+        if not features_dir.exists():
+            continue
+
+        for feature_dir in features_dir.iterdir():
+            if feature_dir.is_dir() and (feature_dir / "__init__.py").exists():
+                yield ext_dir, feature_dir
+
+
+def autodiscover_extension_feature_routers(
+    parent_router: APIRouter,
+    *,
+    enabled: list[str] | None = None,
+) -> list[str]:
+    """Auto-discover routers from extension features (app/extensions/{ext}/features/*/router.py)."""
+    registered = []
+
+    for ext_dir, feature_dir in _iter_extension_features(enabled):
+        if not _has_submodule(feature_dir, "router"):
+            continue
+
+        module_path = (
+            f"app.extensions.{ext_dir.name}.features.{feature_dir.name}.router"
+        )
+        module = _safe_import(module_path)
+
+        if module and hasattr(module, "router"):
+            ext_slug = _name_to_url_slug(ext_dir.name)
+            feature_slug = _name_to_url_slug(feature_dir.name)
+            tag = f"{ext_dir.name.replace('_', ' ').title()}: {feature_dir.name.replace('_', ' ').title()}"
+
+            parent_router.include_router(
+                module.router,
+                prefix=f"/{ext_slug}/{feature_slug}",
+                tags=[tag],
+            )
+            registered.append(f"{ext_dir.name}/{feature_dir.name}")
+
+    if registered:
+        logger.info(f"✓ Extension feature routers: {', '.join(registered)}")
+
+    return registered
+
+
+def autodiscover_extension_feature_tasks(
+    enabled: list[str] | None = None,
+) -> list[str]:
+    """Auto-discover task modules from extension features (app/extensions/{ext}/features/*/tasks.py)."""
+    task_modules = []
+
+    for ext_dir, feature_dir in _iter_extension_features(enabled):
+        if _has_submodule(feature_dir, "tasks"):
+            module_path = (
+                f"app.extensions.{ext_dir.name}.features.{feature_dir.name}.tasks"
+            )
+            task_modules.append(module_path)
+            logger.debug(
+                f"✓ Tasks: extensions/{ext_dir.name}/features/{feature_dir.name}"
+            )
+
+    return task_modules

@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from app.api import examples, health, tasks
 from app.core.autodiscover import (
     ModuleType,
+    autodiscover_extension_feature_routers,
     autodiscover_routers,
     autodiscover_webhooks,
 )
@@ -29,6 +30,9 @@ ROUTER_CONFIG = {
 
 for module_type, config in ROUTER_CONFIG.items():
     autodiscover_routers(module_type, api_router, **config)
+
+# === Extension Feature Routes ===
+autodiscover_extension_feature_routers(api_router)
 
 # === Webhook Router ===
 webhook_router = APIRouter()

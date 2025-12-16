@@ -145,15 +145,23 @@ class Settings(BaseSettings):
         """Construct sync database URL for SQLAdmin (uses psycopg2, not asyncpg)."""
         return f"postgresql+psycopg2://{self._db_connection_base}"
 
+    def _redis_url_with_ssl_cert_reqs(self) -> str:
+        """Add ssl_cert_reqs parameter if using rediss:// (SSL)."""
+        url = self.REDIS_URL
+        if url.startswith("rediss://"):
+            separator = "&" if "?" in url else "?"
+            return f"{url}{separator}ssl_cert_reqs=CERT_NONE"
+        return url
+
     @property
     def CELERY_BROKER_URL(self) -> str:
         """Celery broker URL from Redis URL."""
-        return self.REDIS_URL
+        return self._redis_url_with_ssl_cert_reqs()
 
     @property
     def CELERY_RESULT_BACKEND(self) -> str:
         """Celery result backend URL from Redis URL."""
-        return self.REDIS_URL
+        return self._redis_url_with_ssl_cert_reqs()
 
 
 settings = Settings()

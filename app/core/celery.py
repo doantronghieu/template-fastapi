@@ -15,6 +15,7 @@ from celery import Celery, signals
 from app.core.autodiscover import (
     ModuleType,
     autodiscover_beat_schedules,
+    autodiscover_extension_feature_tasks,
     autodiscover_tasks,
 )
 from app.core.config import settings
@@ -54,6 +55,9 @@ for module_type in [
     ModuleType.EXTENSIONS,
 ]:
     task_modules += autodiscover_tasks(module_type)
+
+# Extension feature tasks
+task_modules += autodiscover_extension_feature_tasks()
 
 
 celery_app = Celery(

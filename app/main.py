@@ -34,10 +34,19 @@ from app.core.templates import BASE_DIR  # noqa: E402
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown events."""
-    _ = app  # Unused but required by FastAPI signature
+    import logging
 
-    # Startup: Initialize database tables
-    await init_db()
+    _ = app  # Unused but required by FastAPI signature
+    logger = logging.getLogger(__name__)
+
+    # Startup: Initialize database tables (optional - server works without DB)
+    try:
+        await init_db()
+    except Exception as e:
+        logger.warning(f"Database initialization failed: {e}")
+        logger.warning(
+            "Server will start without database - DB-dependent features unavailable"
+        )
 
     yield
     # Shutdown: cleanup if needed
