@@ -1,26 +1,24 @@
-"""WeasyPrint PDF converter implementation."""
+"""WeasyPrint markdown to PDF converter implementation."""
 
 from typing import Annotated
 
 from markdown_it import MarkdownIt
 from mdit_py_plugins.front_matter import front_matter_plugin
+from weasyprint import CSS, HTML
 
 # Initialize library paths BEFORE importing weasyprint
 # This handles macOS DYLD_LIBRARY_PATH for Homebrew
-import app.lib.document_processing.pdf_conversion.providers._init_libs  # noqa: F401
-
-from weasyprint import CSS, HTML
-
-from app.lib.document_processing.pdf_conversion.base import PdfConverter
-from app.lib.document_processing.pdf_conversion.config import DEFAULT_STYLE_CONFIG
-from app.lib.document_processing.pdf_conversion.schemas.dto import (
-    PdfConversionOptions,
-    PdfConversionResult,
+import app.lib.document_processing.markdown_to_pdf.providers._init_libs  # noqa: F401
+from app.lib.document_processing.markdown_to_pdf.base import MarkdownToPdfConverter
+from app.lib.document_processing.markdown_to_pdf.config import DEFAULT_STYLE_CONFIG
+from app.lib.document_processing.markdown_to_pdf.schemas.dto import (
+    MarkdownToPdfOptions,
+    MarkdownToPdfResult,
 )
 
 
-class WeasyPrintPdfConverter(PdfConverter):
-    """PDF converter using WeasyPrint + markdown-it-py."""
+class WeasyPrintMarkdownToPdfConverter(MarkdownToPdfConverter):
+    """Markdown to PDF converter using WeasyPrint + markdown-it-py."""
 
     def __init__(self) -> None:
         self._md = (
@@ -33,7 +31,7 @@ class WeasyPrintPdfConverter(PdfConverter):
 
     def _get_css(
         self,
-        options: Annotated[PdfConversionOptions | None, "Conversion options"],
+        options: Annotated[MarkdownToPdfOptions | None, "Conversion options"],
     ) -> str:
         """Get CSS for conversion, merging default with custom if provided."""
         if options and options.css:
@@ -59,11 +57,11 @@ class WeasyPrintPdfConverter(PdfConverter):
 </body>
 </html>"""
 
-    def convert_markdown(
+    def convert(
         self,
         markdown: Annotated[str, "Markdown content to convert"],
-        options: Annotated[PdfConversionOptions | None, "Conversion options"] = None,
-    ) -> PdfConversionResult:
+        options: Annotated[MarkdownToPdfOptions | None, "Conversion options"] = None,
+    ) -> MarkdownToPdfResult:
         """Convert markdown string to PDF bytes."""
         try:
             # Convert markdown to HTML
@@ -82,7 +80,7 @@ class WeasyPrintPdfConverter(PdfConverter):
             stylesheets = [CSS(string=css_content)] if css_content else None
             pdf_bytes = html.write_pdf(stylesheets=stylesheets)
 
-            return PdfConversionResult(success=True, content=pdf_bytes)
+            return MarkdownToPdfResult(success=True, content=pdf_bytes)
 
         except Exception as e:
-            return PdfConversionResult(success=False, message=str(e))
+            return MarkdownToPdfResult(success=False, message=str(e))

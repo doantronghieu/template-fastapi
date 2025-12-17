@@ -53,6 +53,7 @@ dependencies = [
     "markdown-it-py>=3.0",
     "pygments>=2.18",
     "mdit-py-plugins>=0.4",
+    "pymupdf4llm>=0.2.7",
 ]
 
 [project.optional-dependencies]

@@ -1,18 +1,18 @@
-"""PDF conversion data transfer objects."""
+"""Markdown to PDF conversion data transfer objects."""
 
 from enum import Enum
 
 from pydantic import BaseModel, Field
 
 
-class PdfConversionProvider(str, Enum):
-    """PDF conversion provider type."""
+class MarkdownToPdfProvider(str, Enum):
+    """Markdown to PDF conversion provider type."""
 
     WEASYPRINT = "weasyprint"
 
 
-class PdfConversionOptions(BaseModel):
-    """Options for PDF conversion."""
+class MarkdownToPdfOptions(BaseModel):
+    """Options for markdown to PDF conversion."""
 
     css: str | None = Field(default=None, description="Custom CSS string for styling")
     base_url: str | None = Field(
@@ -24,8 +24,8 @@ class PdfConversionOptions(BaseModel):
     )
 
 
-class PdfConversionResult(BaseModel):
-    """Result of PDF conversion operation."""
+class MarkdownToPdfResult(BaseModel):
+    """Result of markdown to PDF conversion operation."""
 
     success: bool = Field(description="Whether conversion succeeded")
     content: bytes | None = Field(default=None, description="PDF bytes")

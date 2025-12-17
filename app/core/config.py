@@ -146,11 +146,15 @@ class Settings(BaseSettings):
         return f"postgresql+psycopg2://{self._db_connection_base}"
 
     def _redis_url_with_ssl_cert_reqs(self) -> str:
-        """Add ssl_cert_reqs parameter if using rediss:// (SSL)."""
+        """Add ssl_cert_reqs parameter if using rediss:// (SSL).
+
+        Uses lowercase 'none' for redis-py compatibility (required by RedBeat scheduler).
+        Celery/Kombu also accepts lowercase values.
+        """
         url = self.REDIS_URL
         if url.startswith("rediss://"):
             separator = "&" if "?" in url else "?"
-            return f"{url}{separator}ssl_cert_reqs=CERT_NONE"
+            return f"{url}{separator}ssl_cert_reqs=none"
         return url
 
     @property
