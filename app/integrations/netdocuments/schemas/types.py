@@ -14,12 +14,13 @@ class DownloadResult(TypedDict):
     error: Annotated[str | None, "Error message if failed"]
 
 
-class NetDocSearchResult(TypedDict):
-    """Search result from NetDocuments API."""
+class UploadResult(TypedDict):
+    """Result of a document upload operation."""
 
-    id: Annotated[str, "Document ID"]
-    name: Annotated[str, "Document name"]
-    extension: Annotated[str | None, "File extension"]
-    version: Annotated[int, "Document version number"]
-    size: Annotated[int | None, "File size in bytes"]
-    modified: Annotated[str | None, "Last modified date"]
+    success: Annotated[bool, "Whether upload succeeded"]
+    doc_id: Annotated[str | None, "NetDocuments document ID"]
+    filename: Annotated[str | None, "Uploaded filename"]
+    file_size: Annotated[int | None, "File size in bytes"]
+    is_new_version: Annotated[bool, "True if created new version of existing doc"]
+    version_number: Annotated[int | None, "Version number if new version created"]
+    error: Annotated[str | None, "Error message if failed"]
