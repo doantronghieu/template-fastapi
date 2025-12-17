@@ -1,65 +1,82 @@
-"""Retry utilities for handling transient failures.
-
-Provides decorators for automatic retry with exponential backoff.
-"""
+"""Retry decorators with exponential backoff for sync and async functions."""
 
 import asyncio
 import logging
+import time
 from functools import wraps
-from typing import Callable, Type, TypeVar
+from typing import Annotated, Callable, Type, TypeVar
 
 logger = logging.getLogger(__name__)
-
 T = TypeVar("T")
 
 
-def async_retry(
-    max_retries: int = 3,
-    exceptions: tuple[Type[Exception], ...] = (Exception,),
-    backoff_base: float = 2.0,
+def retry(
+    max_retries: Annotated[int, "Maximum retry attempts"] = 3,
+    exceptions: Annotated[tuple[Type[Exception], ...], "Exceptions to retry on"] = (
+        Exception,
+    ),
+    backoff_base: Annotated[
+        float, "Exponential backoff base (delay = base^attempt)"
+    ] = 2.0,
+    log_attempts: Annotated[bool, "Log warning on each failed attempt"] = True,
 ) -> Callable:
-    """
-    Decorator for automatic retry with exponential backoff on async functions.
-
-    Args:
-        max_retries: Maximum number of retry attempts (default: 3)
-        exceptions: Tuple of exceptions to catch and retry (default: Exception)
-        backoff_base: Base for exponential backoff calculation (default: 2.0)
-
-    Returns:
-        Decorated function with retry logic
-
-    Example:
-        @async_retry(max_retries=3, exceptions=(httpx.HTTPError,))
-        async def fetch_data():
-            response = await client.get(url)
-            return response.json()
-
-    Note:
-        Always logs errors with full stack trace on final failure.
-    """
+    """Decorator for sync functions with exponential backoff retry."""
 
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         @wraps(func)
-        async def wrapper(*args, **kwargs) -> T:
-            for attempt in range(max_retries):
+        def wrapper(*args, **kwargs) -> T:
+            for attempt in range(1, max_retries + 1):
                 try:
-                    return await func(*args, **kwargs)
-                except exceptions:
-                    # Re-raise on final attempt with error logging
-                    if attempt == max_retries - 1:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    if attempt == max_retries:
                         logger.error(
                             f"{func.__name__} failed after {max_retries} attempts",
                             exc_info=True,
                         )
                         raise
+                    if log_attempts:
+                        logger.warning(
+                            f"{func.__name__} attempt {attempt}/{max_retries} failed: {e}"
+                        )
+                    time.sleep(backoff_base**attempt)
+            raise RuntimeError(f"{func.__name__} exhausted all retries")
 
-                    # Exponential backoff: 2^0=1s, 2^1=2s, 2^2=4s, etc.
-                    delay = backoff_base**attempt
-                    await asyncio.sleep(delay)
+        return wrapper
 
-            # This line should never be reached due to raise above,
-            # but helps type checker understand the return type
+    return decorator
+
+
+def async_retry(
+    max_retries: Annotated[int, "Maximum retry attempts"] = 3,
+    exceptions: Annotated[tuple[Type[Exception], ...], "Exceptions to retry on"] = (
+        Exception,
+    ),
+    backoff_base: Annotated[
+        float, "Exponential backoff base (delay = base^attempt)"
+    ] = 2.0,
+    log_attempts: Annotated[bool, "Log warning on each failed attempt"] = True,
+) -> Callable:
+    """Decorator for async functions with exponential backoff retry."""
+
+    def decorator(func: Callable[..., T]) -> Callable[..., T]:
+        @wraps(func)
+        async def wrapper(*args, **kwargs) -> T:
+            for attempt in range(1, max_retries + 1):
+                try:
+                    return await func(*args, **kwargs)
+                except exceptions as e:
+                    if attempt == max_retries:
+                        logger.error(
+                            f"{func.__name__} failed after {max_retries} attempts",
+                            exc_info=True,
+                        )
+                        raise
+                    if log_attempts:
+                        logger.warning(
+                            f"{func.__name__} attempt {attempt}/{max_retries} failed: {e}"
+                        )
+                    await asyncio.sleep(backoff_base**attempt)
             raise RuntimeError(f"{func.__name__} exhausted all retries")
 
         return wrapper
