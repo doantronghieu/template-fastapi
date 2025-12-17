@@ -6,7 +6,7 @@
 -include .env
 export
 
-.PHONY: help setup dev celery celery-kill flower ngrok test lint format clean db-migrate db-upgrade db-downgrade db-reset db-seed infra-up infra-down infra-reset infra-logs app-build app-up app-down app-restart app-logs client-generate
+.PHONY: help setup dev celery celery-kill flower ngrok test lint format clean db-migrate db-upgrade db-downgrade db-reset db-seed infra-up infra-down infra-reset infra-logs docker-build app-build app-up app-down app-restart app-logs client-generate
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*##' Makefile | sed 's/:.*##/ /' | awk '{cmd=$$1; $$1=""; printf "  make %-25s%s\n", cmd, $$0}'
@@ -72,6 +72,13 @@ infra-logs: ## View logs from all services (Ctrl+C to exit)
 # ============================================================================
 # Application (Docker)
 # ============================================================================
+
+docker-build: ## Build all Docker images (API + Celery) for linux/amd64
+	@echo "Building API image..."
+	DOCKER_BUILDKIT=1 docker build --platform linux/amd64 --target api -t backend-ai:api -f docker/Dockerfile .
+	@echo "Building Celery image..."
+	DOCKER_BUILDKIT=1 docker build --platform linux/amd64 --target celery -t backend-ai:celery -f docker/Dockerfile .
+	@echo "✓ All images built"
 
 app-build: ## Build FastAPI Docker image
 	docker compose build app

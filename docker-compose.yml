@@ -1,10 +1,11 @@
+# Pre-built images required: run `make docker-build` first
+
 services:
-  # FastAPI App (optional - for containerized deployment)
-  # For development, use: make dev
+  # FastAPI App (for containerized deployment)
+  # For local development, use: make dev
   app:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
+    image: backend-ai:api
+    platform: linux/amd64
     container_name: fastapi-app
     env_file: .env.docker
     ports:
@@ -17,17 +18,15 @@ services:
       start_period: 10s
 
   celery-worker:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.celery
+    image: backend-ai:celery
+    platform: linux/amd64
     container_name: celery-worker
     command: uv run celery -A app.core.celery:celery_app worker --loglevel=info --concurrency=1 --pool=solo
     env_file: .env.docker
 
   flower:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.celery
+    image: backend-ai:celery
+    platform: linux/amd64
     container_name: flower
     command: uv run celery -A app.core.celery:celery_app flower --port=${FLOWER_PORT:-5555}
     env_file: .env.docker
@@ -35,9 +34,8 @@ services:
       - "${FLOWER_PORT:-5555}:${FLOWER_PORT:-5555}"
 
   celery-beat:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.celery
+    image: backend-ai:celery
+    platform: linux/amd64
     container_name: celery-beat
     command: uv run celery -A app.core.celery:celery_app beat --scheduler redbeat.schedulers:RedBeatScheduler --loglevel=info
     env_file: .env.docker

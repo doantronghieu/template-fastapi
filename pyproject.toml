@@ -75,3 +75,27 @@ dev = [
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
 ]
+
+# PyTorch CUDA strategy: exclude NVIDIA Python packages (~3GB), install CUDA libs via apt (~1.5GB)
+# pytorch-cpu index lacks torch 2.6+ wheels; using PyPI torch + CUDA runtime in Docker
+# See: docker/Dockerfile for CUDA lib installation
+[tool.uv]
+environments = ["sys_platform == 'darwin'", "sys_platform == 'linux' and platform_machine == 'x86_64'"]
+override-dependencies = [
+    "nvidia-cublas-cu12 ; sys_platform == 'never'",
+    "nvidia-cuda-cupti-cu12 ; sys_platform == 'never'",
+    "nvidia-cuda-nvrtc-cu12 ; sys_platform == 'never'",
+    "nvidia-cuda-runtime-cu12 ; sys_platform == 'never'",
+    "nvidia-cudnn-cu12 ; sys_platform == 'never'",
+    "nvidia-cufft-cu12 ; sys_platform == 'never'",
+    "nvidia-curand-cu12 ; sys_platform == 'never'",
+    "nvidia-cusolver-cu12 ; sys_platform == 'never'",
+    "nvidia-cusparse-cu12 ; sys_platform == 'never'",
+    "nvidia-cusparselt-cu12 ; sys_platform == 'never'",
+    "nvidia-nccl-cu12 ; sys_platform == 'never'",
+    "nvidia-nvjitlink-cu12 ; sys_platform == 'never'",
+    "nvidia-nvtx-cu12 ; sys_platform == 'never'",
+    "nvidia-cufile-cu12 ; sys_platform == 'never'",
+    "nvidia-nvshmem-cu12 ; sys_platform == 'never'",
+    "triton ; sys_platform == 'never'",
+]
