@@ -14,6 +14,7 @@ from openai import AsyncOpenAI
 
 from app.core.config import settings
 from app.lib.llm.config import ModelProvider
+from app.lib.llm.settings import llm_settings
 
 
 class RedisCache(BaseCache):
@@ -54,7 +55,7 @@ def get_extraction_client(
 
     if provider == ModelProvider.GROQ:
         return instructor.from_groq(
-            AsyncGroq(api_key=settings.GROQ_API_KEY),
+            AsyncGroq(api_key=llm_settings.GROQ_API_KEY),
             mode=instructor.Mode.JSON,  # Groq works best with JSON mode
             cache=cache,
         )
@@ -63,7 +64,7 @@ def get_extraction_client(
     return instructor.from_openai(
         AsyncOpenAI(
             base_url="https://openrouter.ai/api/v1",
-            api_key=settings.OPENROUTER_API_KEY,
+            api_key=llm_settings.OPENROUTER_API_KEY,
         ),
         mode=mode,
         cache=cache,

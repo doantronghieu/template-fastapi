@@ -54,6 +54,9 @@ dependencies = [
     "pygments>=2.18",
     "mdit-py-plugins>=0.4",
     "pymupdf4llm>=0.2.7",
+    # Vector store
+    "qdrant-client>=1.16.0,<2.0.0",
+    "langchain-text-splitters>=0.3.0",
 ]
 
 [project.optional-dependencies]

@@ -12,9 +12,9 @@ from langchain_core.language_models import BaseChatModel
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
 
-from app.core.config import settings
 from app.lib.llm.base import LLMProvider
 from app.lib.llm.config import InvocationMode, Model, ModelProvider
+from app.lib.llm.settings import llm_settings
 
 # OpenRouter configuration
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
@@ -56,7 +56,7 @@ class LangChainLLMProvider(LLMProvider):
         if provider_value == ModelProvider.OPENROUTER.value:
             chat_model = ChatOpenAI(
                 model=model_value,
-                api_key=settings.OPENROUTER_API_KEY,
+                api_key=llm_settings.OPENROUTER_API_KEY,
                 base_url=OPENROUTER_BASE_URL,
                 temperature=temperature,
                 max_retries=max_retries,

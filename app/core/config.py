@@ -4,7 +4,6 @@ from urllib.parse import quote
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.lib.llm.config import LLMProviderType
 from app.lib.voice.config import STTProviderType, TTSProviderType
 
 
@@ -68,19 +67,6 @@ class Settings(BaseSettings):
         ..., description="Restart worker after N tasks to prevent memory leaks"
     )
     FLOWER_PORT: int = Field(..., description="Flower monitoring UI port")
-
-    # -------------------------------------------------------------------------
-    # LLM Settings
-    # -------------------------------------------------------------------------
-    LLM_PROVIDER: str = Field(
-        default=LLMProviderType.LANGCHAIN.value,
-        description="LLM provider (e.g., 'langchain', 'litellm')",
-    )
-    GOOGLE_API_KEY: str = Field(..., description="Google API key for Gemini models")
-    OPENROUTER_API_KEY: str = Field(
-        default="", description="OpenRouter API key for unified model access"
-    )
-    GROQ_API_KEY: str = Field(default="", description="Groq API key for fast inference")
 
     # -------------------------------------------------------------------------
     # Voice Settings
