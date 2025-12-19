@@ -1,14 +1,15 @@
 """WeasyPrint markdown to PDF converter implementation."""
 
+# Initialize library paths BEFORE importing weasyprint
+# This handles macOS DYLD_LIBRARY_PATH for Homebrew
+import app.lib.document_processing.markdown_to_pdf.providers._init_libs  # noqa: F401, I001
+
 from typing import Annotated
 
 from markdown_it import MarkdownIt
 from mdit_py_plugins.front_matter import front_matter_plugin
 from weasyprint import CSS, HTML
 
-# Initialize library paths BEFORE importing weasyprint
-# This handles macOS DYLD_LIBRARY_PATH for Homebrew
-import app.lib.document_processing.markdown_to_pdf.providers._init_libs  # noqa: F401
 from app.lib.document_processing.markdown_to_pdf.base import MarkdownToPdfConverter
 from app.lib.document_processing.markdown_to_pdf.config import DEFAULT_STYLE_CONFIG
 from app.lib.document_processing.markdown_to_pdf.schemas.dto import (

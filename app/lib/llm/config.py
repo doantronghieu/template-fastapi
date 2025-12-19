@@ -113,7 +113,7 @@ MODEL_CONFIG: dict[Model, ModelConfig] = {
 # - OpenRouter: No hard rate limits for paid models
 # - OpenAI/Google: Standard tier limits
 PROVIDER_MAX_CONCURRENCY: dict[ModelProvider, int] = {
-    ModelProvider.GROQ: 1,
+    ModelProvider.GROQ: 4,
     ModelProvider.OPENROUTER: 10,
     ModelProvider.OPENAI: 5,
     ModelProvider.GOOGLE: 5,
