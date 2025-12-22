@@ -3,6 +3,7 @@
 Centralized settings for all LLM-related API keys and configuration.
 """
 
+from dotenv import load_dotenv
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -10,6 +11,9 @@ from app.core.autodiscover import ModuleType, generate_module_env, get_module_en
 from app.lib.llm.config import LLMProviderType
 
 _env_file_path = get_module_env_path(ModuleType.LIB, __file__)
+
+# Load env file into os.environ for LangChain compatibility
+load_dotenv(_env_file_path, override=True)
 
 
 class LLMSettings(BaseSettings):

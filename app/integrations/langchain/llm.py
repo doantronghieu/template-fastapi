@@ -14,7 +14,7 @@ from pydantic import BaseModel
 
 from app.lib.llm.base import LLMProvider
 from app.lib.llm.config import InvocationMode, Model, ModelProvider
-from app.lib.llm.settings import llm_settings
+from app.lib.llm.settings import llm_settings  # noqa: F401 - loads env into os.environ
 
 # OpenRouter configuration
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
