@@ -11,6 +11,18 @@ Convention-based module discovery. Drop files with correct names → auto-regist
 | `integrations/` | Opt-out | `DISABLED_INTEGRATIONS=x,y` | `/api/integrations/{name}/*` | `/api/webhooks/{name}/*` |
 | `extensions/` | Opt-in | `ENABLED_EXTENSIONS=a,b` | `/api/{name}/*` | `/api/webhooks/{name}/*` |
 
+## Extension Internal Structure
+
+Extensions can have internal organization. Only specific paths are auto-discovered:
+
+| Path | Discovery | Purpose |
+|------|-----------|---------|
+| `{ext}/features/*/router.py` | Auto | Nested feature routers |
+| `{ext}/features/*/tasks.py` | Auto | Nested feature tasks |
+| `{ext}/router.py` | Auto | Extension root router |
+| `{ext}/domains/` | Manual | Shared integration wrappers |
+| `{ext}/core/` | Manual | Cross-cutting infra |
+
 ## File Conventions
 
 | File | Registers To | Required Export |
